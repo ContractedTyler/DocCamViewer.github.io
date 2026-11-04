@@ -6,34 +6,26 @@
     <meta name="theme-color" content="#10213a" />
     <title>Document Camera</title>
     <style>
-      :root {
-        color-scheme: light;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        color: #172033;
-        background: #edf2f8;
-      }
+      :root { color-scheme: light; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #172033; background: #edf2f8; }
       * { box-sizing: border-box; }
       body { margin: 0; min-height: 100vh; }
       .app { max-width: 1200px; margin: 0 auto; padding: 1.25rem; }
-      header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+      header { margin-bottom: 1rem; }
       h1 { margin: 0; font-size: clamp(1.45rem, 3vw, 2rem); }
       .layout { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 1rem; align-items: start; }
       .viewer, .panel { background: white; border-radius: 14px; box-shadow: 0 8px 26px #162b4814; }
       .viewer { overflow: hidden; }
-      .stage {
-        position: relative; display: grid; place-items: center; width: 100%; aspect-ratio: 16 / 9;
-        min-height: 260px; overflow: hidden; background: #101827; touch-action: none; user-select: none;
-      }
+      .stage { position: relative; display: grid; place-items: center; width: 100%; aspect-ratio: 16 / 9; min-height: 260px; overflow: hidden; background: #101827; touch-action: none; user-select: none; }
       video { display: block; width: 100%; height: 100%; object-fit: contain; transform-origin: center; }
       .placeholder { position: absolute; inset: 0; display: grid; place-content: center; gap: .5rem; padding: 1rem; color: white; text-align: center; }
       .placeholder[hidden] { display: none; }
       .placeholder p { margin: 0; color: #d3dceb; }
       .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem; padding: .8rem; border-top: 1px solid #e6ebf2; }
-      button, select { font: inherit; }
+      button, select, input { font: inherit; }
       button, select { min-height: 42px; border: 1px solid #cbd5e1; border-radius: 8px; background: white; color: #172033; padding: .55rem .8rem; }
       button { cursor: pointer; font-weight: 600; }
       button:hover:not(:disabled) { background: #f0f5ff; border-color: #8ba9dc; }
-      button:focus-visible, select:focus-visible, a:focus-visible { outline: 3px solid #78a7ff; outline-offset: 2px; }
+      button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid #78a7ff; outline-offset: 2px; }
       button.primary { background: #175cd3; border-color: #175cd3; color: white; }
       button.primary:hover:not(:disabled) { background: #124daf; }
       button:disabled, select:disabled { cursor: not-allowed; opacity: .5; }
@@ -42,17 +34,16 @@
       .panel h2 { margin: 0 0 .75rem; font-size: 1.1rem; }
       .panel label { display: block; margin: .85rem 0 .35rem; font-weight: 650; }
       .panel select { width: 100%; }
+      .adjustment { margin: .85rem 0; }
+      .adjustment label { display: flex; justify-content: space-between; gap: .5rem; margin: 0 0 .3rem; }
+      .adjustment input { display: block; width: 100%; accent-color: #175cd3; }
       .hint, #status { color: #526078; font-size: .92rem; }
       #status { min-height: 2.8em; margin: .75rem 0 0; }
       .snapshots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; margin-top: .75rem; }
       .snapshots img { display: block; width: 100%; border-radius: 7px; background: #e7edf5; }
       .snapshot-link { display: block; color: #175cd3; font-size: .85rem; overflow-wrap: anywhere; }
       .footnote { margin: 1rem 0 0; color: #526078; font-size: .85rem; }
-      @media (max-width: 760px) {
-        .app { padding: .8rem; }
-        .layout { grid-template-columns: 1fr; }
-        .stage { min-height: 220px; }
-      }
+      @media (max-width: 760px) { .app { padding: .8rem; } .layout { grid-template-columns: 1fr; } .stage { min-height: 220px; } }
       @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } }
     </style>
   </head>
@@ -63,14 +54,12 @@
         <section class="viewer" aria-label="Document camera viewer">
           <div class="stage" id="stage" aria-label="Camera preview. When zoomed in, drag to pan the image.">
             <video id="video" autoplay muted playsinline hidden></video>
-            <div class="placeholder" id="placeholder">
-              <strong>Camera preview</strong>
-              <p>Choose a camera and select Start camera to begin.</p>
-            </div>
+            <div class="placeholder" id="placeholder"><strong>Camera preview</strong><p>Choose a camera and select Start camera to begin.</p></div>
           </div>
           <div class="toolbar" aria-label="Camera controls">
             <button type="button" class="primary" id="start">Start camera</button>
             <button type="button" id="stop" disabled>Stop</button>
+            <button type="button" id="freeze" disabled aria-pressed="false">Freeze frame</button>
             <span aria-hidden="true">|</span>
             <button type="button" id="zoom-out" aria-label="Zoom out" disabled>−</button>
             <span class="zoom-readout" id="zoom-readout" aria-live="polite">100%</span>
@@ -84,9 +73,12 @@
           <label for="camera-select">Camera</label>
           <select id="camera-select"><option value="">Default camera</option></select>
           <p class="hint">Connect your document camera before starting. If it is not listed, allow camera access and refresh this page.</p>
+          <div class="adjustment"><label for="brightness">Brightness <output id="brightness-value">100%</output></label><input id="brightness" type="range" min="50" max="150" value="100" aria-label="Brightness" disabled></div>
+          <div class="adjustment"><label for="contrast">Contrast <output id="contrast-value">100%</output></label><input id="contrast" type="range" min="50" max="150" value="100" aria-label="Contrast" disabled></div>
+          <button type="button" id="reset-adjustments" disabled>Reset image adjustments</button>
           <p id="status" role="status" aria-live="polite">Camera access starts only when you click “Start camera.”</p>
           <h2>Snapshots</h2>
-          <p class="hint">Snapshots are saved to your computer when you click Take snapshot.</p>
+          <p class="hint">Snapshots are downloaded when you click Take snapshot. Brightness and contrast adjustments are included.</p>
           <div class="snapshots" id="snapshots" aria-live="polite"></div>
           <p class="footnote">Camera video stays in this browser tab. This page does not upload video or snapshots.</p>
         </aside>
@@ -102,11 +94,17 @@
         const status = document.getElementById('status');
         const startButton = document.getElementById('start');
         const stopButton = document.getElementById('stop');
+        const freezeButton = document.getElementById('freeze');
         const snapshotButton = document.getElementById('snapshot');
         const zoomInButton = document.getElementById('zoom-in');
         const zoomOutButton = document.getElementById('zoom-out');
         const resetButton = document.getElementById('reset-view');
         const zoomReadout = document.getElementById('zoom-readout');
+        const brightness = document.getElementById('brightness');
+        const contrast = document.getElementById('contrast');
+        const brightnessValue = document.getElementById('brightness-value');
+        const contrastValue = document.getElementById('contrast-value');
+        const resetAdjustmentsButton = document.getElementById('reset-adjustments');
         const canvas = document.getElementById('capture');
         const snapshots = document.getElementById('snapshots');
         let stream = null;
@@ -114,13 +112,16 @@
         let offsetX = 0;
         let offsetY = 0;
         let drag = null;
-        const MIN_ZOOM = 1;
-        const MAX_ZOOM = 4;
-        const ZOOM_STEP = 0.25;
+        const MIN_ZOOM = 1, MAX_ZOOM = 4, ZOOM_STEP = 0.25;
 
         function setStatus(message) { status.textContent = message; }
         function renderView() {
           video.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+          video.style.filter = `brightness(${brightness.value}%) contrast(${contrast.value}%)`;
+          brightnessValue.value = `${brightness.value}%`;
+          contrastValue.value = `${contrast.value}%`;
+          brightnessValue.textContent = `${brightness.value}%`;
+          contrastValue.textContent = `${contrast.value}%`;
           zoomReadout.textContent = `${Math.round(scale * 100)}%`;
           zoomInButton.disabled = !stream || scale >= MAX_ZOOM;
           zoomOutButton.disabled = !stream || scale <= MIN_ZOOM;
@@ -133,7 +134,19 @@
           if (scale === MIN_ZOOM) { offsetX = 0; offsetY = 0; }
           renderView();
         }
-        function stopCamera() {
+        function setAdjustmentsEnabled(enabled) {
+          brightness.disabled = !enabled;
+          contrast.disabled = !enabled;
+          resetAdjustmentsButton.disabled = !enabled || (brightness.value === '100' && contrast.value === '100');
+        }
+        function resetAdjustments() { brightness.value = '100'; contrast.value = '100'; renderView(); setAdjustmentsEnabled(Boolean(stream)); }
+        function resetFreeze() {
+          video.pause();
+          freezeButton.disabled = !stream;
+          freezeButton.textContent = 'Freeze frame';
+          freezeButton.setAttribute('aria-pressed', 'false');
+        }
+        function stopCamera(message = 'Camera stopped.') {
           if (stream) stream.getTracks().forEach(track => track.stop());
           stream = null;
           video.srcObject = null;
@@ -143,8 +156,10 @@
           stopButton.disabled = true;
           snapshotButton.disabled = true;
           cameraSelect.disabled = false;
+          resetFreeze();
+          setAdjustmentsEnabled(false);
           resetView();
-          setStatus('Camera stopped.');
+          setStatus(message);
         }
         async function refreshCameras() {
           if (!navigator.mediaDevices?.enumerateDevices) return;
@@ -153,13 +168,9 @@
             const cameras = devices.filter(device => device.kind === 'videoinput');
             const selected = cameraSelect.value;
             cameraSelect.replaceChildren(new Option(cameras.length ? 'System default camera' : 'No camera found', ''));
-            cameras.forEach((camera, index) => {
-              cameraSelect.add(new Option(camera.label || `Camera ${index + 1}`, camera.deviceId));
-            });
+            cameras.forEach((camera, index) => cameraSelect.add(new Option(camera.label || `Camera ${index + 1}`, camera.deviceId)));
             if ([...cameraSelect.options].some(option => option.value === selected)) cameraSelect.value = selected;
-          } catch (error) {
-            setStatus('Could not list cameras. Check the browser’s camera permissions.');
-          }
+          } catch { setStatus('Could not list cameras. Check the browser’s camera permissions.'); }
         }
         async function startCamera() {
           if (!navigator.mediaDevices?.getUserMedia) {
@@ -178,8 +189,10 @@
             await video.play();
             stopButton.disabled = false;
             snapshotButton.disabled = false;
+            freezeButton.disabled = false;
             cameraSelect.disabled = false;
-            setStatus('Camera is on. Drag the image when zoomed in to pan.');
+            setAdjustmentsEnabled(true);
+            setStatus('Camera is on. Freeze the image or drag it when zoomed in to pan.');
             await refreshCameras();
             cameraSelect.disabled = false;
             renderView();
@@ -191,6 +204,7 @@
             placeholder.hidden = false;
             cameraSelect.disabled = false;
             startButton.disabled = false;
+            setAdjustmentsEnabled(false);
             const messages = {
               NotAllowedError: 'Camera permission was denied. Allow camera access for this site in Chrome, then try again.',
               NotFoundError: 'No camera was found. Connect a document camera and try again.',
@@ -205,14 +219,15 @@
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
           const context = canvas.getContext('2d');
+          context.filter = `brightness(${brightness.value}%) contrast(${contrast.value}%)`;
           context.drawImage(video, 0, 0, canvas.width, canvas.height);
           canvas.toBlob(blob => {
             if (!blob) { setStatus('Could not create the snapshot. Please try again.'); return; }
             const url = URL.createObjectURL(blob);
-            const date = new Date().toISOString().replace(/[:.]/g, '-');
+            const filename = `document-camera-${new Date().toISOString().replace(/[:.]/g, '-')}.png`;
             const link = document.createElement('a');
             link.href = url;
-            link.download = `document-camera-${date}.png`;
+            link.download = filename;
             link.click();
             const item = document.createElement('div');
             const image = document.createElement('img');
@@ -221,7 +236,7 @@
             const previewLink = document.createElement('a');
             previewLink.className = 'snapshot-link';
             previewLink.href = url;
-            previewLink.download = link.download;
+            previewLink.download = filename;
             previewLink.textContent = 'Download snapshot';
             item.append(image, previewLink);
             snapshots.prepend(item);
@@ -230,22 +245,35 @@
         }
 
         startButton.addEventListener('click', startCamera);
-        stopButton.addEventListener('click', stopCamera);
+        stopButton.addEventListener('click', () => stopCamera());
+        freezeButton.addEventListener('click', async () => {
+          if (!stream) return;
+          if (video.paused) {
+            try {
+              await video.play();
+              freezeButton.textContent = 'Freeze frame';
+              freezeButton.setAttribute('aria-pressed', 'false');
+              setStatus('Live camera resumed.');
+            } catch { setStatus('Could not resume the live camera. Try starting the camera again.'); }
+          } else {
+            video.pause();
+            freezeButton.textContent = 'Resume live';
+            freezeButton.setAttribute('aria-pressed', 'true');
+            setStatus('Frame frozen. Click Resume live to continue.');
+          }
+        });
         snapshotButton.addEventListener('click', takeSnapshot);
         zoomInButton.addEventListener('click', () => setZoom(scale + ZOOM_STEP));
         zoomOutButton.addEventListener('click', () => setZoom(scale - ZOOM_STEP));
         resetButton.addEventListener('click', resetView);
+        brightness.addEventListener('input', renderView);
+        contrast.addEventListener('input', renderView);
+        brightness.addEventListener('change', () => setAdjustmentsEnabled(Boolean(stream)));
+        contrast.addEventListener('change', () => setAdjustmentsEnabled(Boolean(stream)));
+        resetAdjustmentsButton.addEventListener('click', resetAdjustments);
         cameraSelect.addEventListener('change', async () => {
           if (!stream) return;
-          if (stream) stream.getTracks().forEach(track => track.stop());
-          stream = null;
-          video.srcObject = null;
-          video.hidden = true;
-          placeholder.hidden = false;
-          startButton.disabled = false;
-          stopButton.disabled = true;
-          snapshotButton.disabled = true;
-          resetView();
+          stopCamera('Switching camera…');
           await startCamera();
         });
         stage.addEventListener('pointerdown', event => {
