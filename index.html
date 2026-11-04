@@ -10,7 +10,7 @@
       * { box-sizing: border-box; }
       body { margin: 0; min-height: 100vh; min-height: 100dvh; }
       button, select, input { font: inherit; }
-      button, select { min-height: 42px; border: 1px solid #cbd5e1; border-radius: 8px; background: white; color: #172033; padding: .55rem .8rem; }
+      button, select, input[type="color"] { min-height: 42px; border: 1px solid #cbd5e1; border-radius: 8px; background: white; color: #172033; padding: .55rem .8rem; }
       button { cursor: pointer; font-weight: 600; }
       button:hover:not(:disabled) { background: #f0f5ff; border-color: #8ba9dc; }
       button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid #78a7ff; outline-offset: 2px; }
@@ -25,10 +25,12 @@
       .viewer { flex: 1; min-height: 0; display: flex; flex-direction: column; }
       .stage { position: relative; flex: 1; min-height: 0; display: grid; place-items: center; overflow: hidden; background: #101827; touch-action: none; user-select: none; }
       video { display: block; width: 100%; height: 100%; object-fit: contain; transform-origin: center; }
+      #annotation-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+      #annotation-canvas.drawing { pointer-events: auto; cursor: crosshair; }
       .placeholder { position: absolute; inset: 0; display: grid; place-content: center; gap: .5rem; padding: 1rem; color: white; text-align: center; }
       .placeholder p { margin: 0; color: #d3dceb; }
       .menu-backdrop { position: fixed; z-index: 5; inset: 0; background: #07101f88; }
-      .panel { position: fixed; z-index: 6; top: 0; right: 0; bottom: 0; width: min(390px, calc(100vw - 3.5rem)); overflow-y: auto; padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom)); background: #fff; box-shadow: -8px 0 30px #0004; transform: translateX(0); transition: transform .2s ease; }
+      .panel { position: fixed; z-index: 6; top: 0; right: 0; bottom: 0; width: min(390px, calc(100vw - 3.5rem)); overflow-y: auto; padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom)); background: #fff; box-shadow: -8px 0 30px #0004; transition: transform .2s ease; }
       .panel.closed { transform: translateX(105%); visibility: hidden; }
       .panel h1 { margin: 0; font-size: 1.25rem; }
       .panel h2 { margin: 1.1rem 0 .65rem; font-size: 1.05rem; }
@@ -42,12 +44,24 @@
       .adjustment { margin: .85rem 0; }
       .adjustment label { display: flex; justify-content: space-between; gap: .5rem; margin: 0 0 .3rem; }
       .adjustment input { display: block; width: 100%; accent-color: #175cd3; }
-      .hint, #status { color: #526078; font-size: .92rem; }
+      .annotation-options { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; align-items: end; margin-top: .65rem; }
+      .annotation-options label { margin: 0; font-size: .9rem; }
+      .annotation-options input[type="color"] { display: block; width: 100%; padding: .25rem; }
+      .annotation-options select { width: 100%; }
+      .hint, #status, .setup-copy { color: #526078; font-size: .92rem; }
       #status { min-height: 2.8em; margin: .75rem 0; }
       .snapshots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; margin-top: .75rem; }
       .snapshots img { display: block; width: 100%; border-radius: 7px; background: #e7edf5; }
       .snapshot-link { display: block; color: #175cd3; font-size: .85rem; overflow-wrap: anywhere; }
       .footnote { margin: 1rem 0 0; color: #526078; font-size: .85rem; }
+      .setup-screen { position: fixed; z-index: 10; inset: 0; display: grid; place-items: center; padding: 1rem; background: #07101fbb; }
+      .setup-card { width: min(440px, 100%); padding: 1.5rem; border-radius: 16px; background: #fff; box-shadow: 0 18px 60px #0005; }
+      .setup-card h1 { margin: 0 0 .65rem; font-size: 1.45rem; }
+      .setup-card p { line-height: 1.5; }
+      .setup-card label { display: block; margin: 1rem 0 .35rem; font-weight: 650; }
+      .setup-card select { width: 100%; }
+      .setup-card button { width: 100%; margin-top: .75rem; }
+      #setup-status { min-height: 1.5em; color: #526078; font-size: .9rem; }
       @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; } }
     </style>
   </head>
@@ -58,9 +72,10 @@
         <button type="button" id="fullscreen" aria-label="Enter fullscreen" title="Enter fullscreen">⛶</button>
       </nav>
       <section class="viewer" aria-label="Document camera viewer">
-        <div class="stage" id="stage" aria-label="Camera preview. When zoomed in, drag to pan the image.">
+        <div class="stage" id="stage" aria-label="Camera preview. When zoomed in, drag to pan. Enable annotation to draw on the image.">
           <video id="video" autoplay muted playsinline hidden></video>
-          <div class="placeholder" id="placeholder"><strong>Document Camera</strong><p>Open the controls menu to choose a camera and start the live view.</p></div>
+          <canvas id="annotation-canvas" aria-label="Annotation layer"></canvas>
+          <div class="placeholder" id="placeholder"><strong>Document Camera</strong><p>Choose a camera and start the live view.</p></div>
         </div>
       </section>
       <div class="menu-backdrop" id="menu-backdrop" hidden></div>
@@ -78,17 +93,35 @@
         </div>
         <h2>Camera setup</h2>
         <label for="camera-select">Camera</label>
-        <select id="camera-select"><option value="">Default camera</option></select>
+        <select id="camera-select"><option value="">System default camera</option></select>
         <p class="hint">Connect your document camera before starting. If it is not listed, allow camera access and refresh this page.</p>
+        <h2>Annotations</h2>
+        <button type="button" id="annotate" aria-pressed="false" disabled>Enable annotation</button>
+        <div class="annotation-options">
+          <label for="ink-color">Pen color<input id="ink-color" type="color" value="#ff3030" disabled></label>
+          <label for="ink-size">Pen size<select id="ink-size" disabled><option value="2">Fine</option><option value="4" selected>Medium</option><option value="8">Thick</option><option value="12">Extra thick</option></select></label>
+        </div>
+        <div class="control-grid"><button type="button" id="undo-annotation" disabled>Undo stroke</button><button type="button" id="clear-annotations" disabled>Clear annotations</button></div>
+        <p class="hint">Enable annotation, then draw with a mouse, touch, or stylus. Annotations are included in snapshots.</p>
+        <h2>Image adjustments</h2>
         <div class="adjustment"><label for="brightness">Brightness <output id="brightness-value">100%</output></label><input id="brightness" type="range" min="50" max="150" value="100" aria-label="Brightness" disabled></div>
         <div class="adjustment"><label for="contrast">Contrast <output id="contrast-value">100%</output></label><input id="contrast" type="range" min="50" max="150" value="100" aria-label="Contrast" disabled></div>
         <button type="button" id="reset-adjustments" disabled>Reset image adjustments</button>
-        <p id="status" role="status" aria-live="polite">Camera access starts only when you click “Start camera.”</p>
+        <p id="status" role="status" aria-live="polite">Camera access starts when you choose a camera and continue.</p>
         <h2>Snapshots</h2>
-        <p class="hint">Snapshots are downloaded when captured. Brightness and contrast adjustments are included.</p>
+        <p class="hint">Snapshots are downloaded when captured.</p>
         <div class="snapshots" id="snapshots" aria-live="polite"></div>
         <p class="footnote">Camera video stays in this browser tab. This page does not upload video or snapshots.</p>
       </aside>
+      <section class="setup-screen" id="setup-screen" role="dialog" aria-modal="true" aria-labelledby="setup-title">
+        <div class="setup-card">
+          <h1 id="setup-title">Set up your document camera</h1>
+          <p class="setup-copy">Allow camera access, then choose which document camera to use. Your camera feed stays in this browser and is not uploaded.</p>
+          <button type="button" class="primary" id="grant-camera">Allow camera access</button>
+          <div id="camera-choice-area" hidden><label for="first-camera-select">Choose a camera</label><select id="first-camera-select"></select><button type="button" class="primary" id="start-selected-camera">Start selected camera</button></div>
+          <p id="setup-status" role="status" aria-live="polite">Camera permission is requested only after you click Allow camera access.</p>
+        </div>
+      </section>
     </main>
     <canvas id="capture" hidden></canvas>
     <script>
@@ -96,13 +129,26 @@
         const app = document.getElementById('app');
         const video = document.getElementById('video');
         const stage = document.getElementById('stage');
+        const annotationCanvas = document.getElementById('annotation-canvas');
+        const annotationContext = annotationCanvas.getContext('2d');
         const placeholder = document.getElementById('placeholder');
         const cameraSelect = document.getElementById('camera-select');
+        const firstCameraSelect = document.getElementById('first-camera-select');
+        const setupScreen = document.getElementById('setup-screen');
+        const cameraChoiceArea = document.getElementById('camera-choice-area');
+        const grantCameraButton = document.getElementById('grant-camera');
+        const startSelectedCameraButton = document.getElementById('start-selected-camera');
+        const setupStatus = document.getElementById('setup-status');
         const status = document.getElementById('status');
         const startButton = document.getElementById('start');
         const stopButton = document.getElementById('stop');
         const freezeButton = document.getElementById('freeze');
         const snapshotButton = document.getElementById('snapshot');
+        const annotateButton = document.getElementById('annotate');
+        const inkColor = document.getElementById('ink-color');
+        const inkSize = document.getElementById('ink-size');
+        const undoButton = document.getElementById('undo-annotation');
+        const clearButton = document.getElementById('clear-annotations');
         const zoomInButton = document.getElementById('zoom-in');
         const zoomOutButton = document.getElementById('zoom-out');
         const resetButton = document.getElementById('reset-view');
@@ -112,7 +158,7 @@
         const brightnessValue = document.getElementById('brightness-value');
         const contrastValue = document.getElementById('contrast-value');
         const resetAdjustmentsButton = document.getElementById('reset-adjustments');
-        const canvas = document.getElementById('capture');
+        const captureCanvas = document.getElementById('capture');
         const snapshots = document.getElementById('snapshots');
         const menu = document.getElementById('control-menu');
         const openMenuButton = document.getElementById('open-menu');
@@ -120,17 +166,59 @@
         const backdrop = document.getElementById('menu-backdrop');
         const fullscreenButton = document.getElementById('fullscreen');
         let stream = null, scale = 1, offsetX = 0, offsetY = 0, drag = null;
+        let annotationActive = false, drawingStroke = null;
+        const strokes = [];
         const MIN_ZOOM = 1, MAX_ZOOM = 4, ZOOM_STEP = 0.25;
 
         function setStatus(message) { status.textContent = message; }
+        function resizeAnnotationCanvas() {
+          const rect = stage.getBoundingClientRect();
+          const dpr = window.devicePixelRatio || 1;
+          annotationCanvas.width = Math.max(1, Math.round(rect.width * dpr));
+          annotationCanvas.height = Math.max(1, Math.round(rect.height * dpr));
+          annotationCanvas.style.width = `${rect.width}px`;
+          annotationCanvas.style.height = `${rect.height}px`;
+          annotationContext.setTransform(dpr, 0, 0, dpr, 0, 0);
+          redrawAnnotations();
+        }
+        function redrawAnnotations() {
+          const rect = stage.getBoundingClientRect();
+          const dpr = window.devicePixelRatio || 1;
+          annotationContext.setTransform(dpr, 0, 0, dpr, 0, 0);
+          annotationContext.clearRect(0, 0, rect.width, rect.height);
+          for (const stroke of strokes) {
+            if (!stroke.points.length) continue;
+            annotationContext.beginPath();
+            annotationContext.strokeStyle = stroke.color;
+            annotationContext.lineWidth = stroke.size;
+            annotationContext.lineCap = 'round';
+            annotationContext.lineJoin = 'round';
+            annotationContext.moveTo(stroke.points[0].x * rect.width, stroke.points[0].y * rect.height);
+            if (stroke.points.length === 1) {
+              const point = stroke.points[0];
+              annotationContext.lineTo(point.x * rect.width + 0.01, point.y * rect.height + 0.01);
+            } else {
+              for (let i = 1; i < stroke.points.length; i++) annotationContext.lineTo(stroke.points[i].x * rect.width, stroke.points[i].y * rect.height);
+            }
+            annotationContext.stroke();
+          }
+        }
+        function updateAnnotationControls() {
+          const active = Boolean(stream);
+          annotateButton.disabled = !active;
+          inkColor.disabled = !active;
+          inkSize.disabled = !active;
+          undoButton.disabled = !active || strokes.length === 0;
+          clearButton.disabled = !active || strokes.length === 0;
+          annotateButton.textContent = annotationActive ? 'Finish annotation' : 'Enable annotation';
+          annotateButton.setAttribute('aria-pressed', String(annotationActive));
+          annotationCanvas.classList.toggle('drawing', annotationActive && active);
+          stage.style.cursor = annotationActive && active ? 'crosshair' : (active && scale > 1 ? (drag ? 'grabbing' : 'grab') : 'default');
+        }
         function setMenuOpen(open) {
-          menu.classList.toggle('closed', !open);
-          menu.inert = !open;
-          menu.setAttribute('aria-hidden', String(!open));
-          openMenuButton.setAttribute('aria-expanded', String(open));
-          backdrop.hidden = !open;
-          if (open) closeMenuButton.focus();
-          else openMenuButton.focus();
+          menu.classList.toggle('closed', !open); menu.inert = !open;
+          menu.setAttribute('aria-hidden', String(!open)); openMenuButton.setAttribute('aria-expanded', String(open)); backdrop.hidden = !open;
+          if (open) closeMenuButton.focus(); else openMenuButton.focus();
         }
         function syncFullscreenButton() {
           const isFullscreen = document.fullscreenElement === app;
@@ -147,56 +235,49 @@
           zoomInButton.disabled = !stream || scale >= MAX_ZOOM;
           zoomOutButton.disabled = !stream || scale <= MIN_ZOOM;
           resetButton.disabled = !stream || (scale === MIN_ZOOM && offsetX === 0 && offsetY === 0);
-          stage.style.cursor = stream && scale > 1 ? (drag ? 'grabbing' : 'grab') : 'default';
+          updateAnnotationControls();
         }
         function resetView() { scale = 1; offsetX = 0; offsetY = 0; renderView(); }
-        function setZoom(next) {
-          scale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, next));
-          if (scale === MIN_ZOOM) { offsetX = 0; offsetY = 0; }
-          renderView();
-        }
+        function setZoom(next) { scale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, next)); if (scale === MIN_ZOOM) { offsetX = 0; offsetY = 0; } renderView(); }
         function setAdjustmentsEnabled(enabled) {
           brightness.disabled = !enabled; contrast.disabled = !enabled;
           resetAdjustmentsButton.disabled = !enabled || (brightness.value === '100' && contrast.value === '100');
         }
         function resetAdjustments() { brightness.value = '100'; contrast.value = '100'; renderView(); setAdjustmentsEnabled(Boolean(stream)); }
-        function resetFreeze() {
-          video.pause(); freezeButton.disabled = !stream;
-          freezeButton.textContent = 'Freeze frame'; freezeButton.setAttribute('aria-pressed', 'false');
-        }
-        function stopCamera(message = 'Camera stopped.') {
-          if (stream) stream.getTracks().forEach(track => track.stop());
-          stream = null; video.srcObject = null; video.hidden = true; placeholder.hidden = false;
-          startButton.disabled = false; stopButton.disabled = true; snapshotButton.disabled = true; cameraSelect.disabled = false;
-          resetFreeze(); setAdjustmentsEnabled(false); resetView(); setStatus(message);
+        function populateCameraSelect(select, devices) {
+          const cameras = devices.filter(device => device.kind === 'videoinput');
+          const previous = select.value;
+          select.replaceChildren(new Option('System default camera', ''));
+          cameras.forEach((camera, index) => select.add(new Option(camera.label || `Camera ${index + 1}`, camera.deviceId)));
+          if ([...select.options].some(option => option.value === previous)) select.value = previous;
         }
         async function refreshCameras() {
           if (!navigator.mediaDevices?.enumerateDevices) return;
           try {
             const devices = await navigator.mediaDevices.enumerateDevices();
-            const cameras = devices.filter(device => device.kind === 'videoinput');
-            const selected = cameraSelect.value;
-            cameraSelect.replaceChildren(new Option(cameras.length ? 'System default camera' : 'No camera found', ''));
-            cameras.forEach((camera, index) => cameraSelect.add(new Option(camera.label || `Camera ${index + 1}`, camera.deviceId)));
-            if ([...cameraSelect.options].some(option => option.value === selected)) cameraSelect.value = selected;
+            populateCameraSelect(cameraSelect, devices);
+            if (!cameraChoiceArea.hidden) populateCameraSelect(firstCameraSelect, devices);
           } catch { setStatus('Could not list cameras. Check the browser’s camera permissions.'); }
         }
-        async function startCamera() {
-          if (!navigator.mediaDevices?.getUserMedia) { setStatus('Camera access is not available. Open this page in a supported browser over HTTPS.'); return; }
+        function stopStreamOnly() { if (stream) stream.getTracks().forEach(track => track.stop()); stream = null; }
+        async function startCamera(deviceId = cameraSelect.value) {
+          if (!navigator.mediaDevices?.getUserMedia) { setStatus('Camera access is not available. Open this page in a supported browser over HTTPS.'); return false; }
           startButton.disabled = true; setStatus('Waiting for camera permission…');
           try {
-            const deviceId = cameraSelect.value;
             const constraints = { audio: false, video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'environment' } };
             stream = await navigator.mediaDevices.getUserMedia(constraints);
             video.srcObject = stream; video.hidden = false; placeholder.hidden = true;
             await video.play();
-            stopButton.disabled = false; snapshotButton.disabled = false; freezeButton.disabled = false; cameraSelect.disabled = false;
-            setAdjustmentsEnabled(true); setStatus('Camera is on. Freeze the image or drag it when zoomed in to pan.');
-            await refreshCameras(); cameraSelect.disabled = false; renderView();
+            stopButton.disabled = false; snapshotButton.disabled = false; freezeButton.disabled = false;
+            setAdjustmentsEnabled(true); await refreshCameras();
+            if (deviceId) cameraSelect.value = deviceId;
+            setStatus('Camera is on. Freeze the image, annotate, or drag to pan when zoomed in.');
+            renderView(); updateAnnotationControls();
+            return true;
           } catch (error) {
-            if (stream) stream.getTracks().forEach(track => track.stop());
-            stream = null; video.srcObject = null; video.hidden = true; placeholder.hidden = false;
-            cameraSelect.disabled = false; startButton.disabled = false; setAdjustmentsEnabled(false);
+            stopStreamOnly(); video.srcObject = null; video.hidden = true; placeholder.hidden = false;
+            startButton.disabled = false; stopButton.disabled = true; snapshotButton.disabled = true; freezeButton.disabled = true;
+            setAdjustmentsEnabled(false); updateAnnotationControls();
             const messages = {
               NotAllowedError: 'Camera permission was denied. Allow camera access for this site in Chrome, then try again.',
               NotFoundError: 'No camera was found. Connect a document camera and try again.',
@@ -204,27 +285,79 @@
               OverconstrainedError: 'That camera is unavailable. Select another camera and try again.'
             };
             setStatus(messages[error.name] || `Could not start camera: ${error.message || 'unknown error'}.`);
+            return false;
           }
+        }
+        async function requestCameraAccess() {
+          if (!navigator.mediaDevices?.getUserMedia) { setupStatus.textContent = 'Camera access requires a supported browser and a secure HTTPS page.'; return; }
+          grantCameraButton.disabled = true; setupStatus.textContent = 'Waiting for camera permission…';
+          let permissionStream;
+          try {
+            permissionStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            populateCameraSelect(firstCameraSelect, devices); populateCameraSelect(cameraSelect, devices);
+            cameraChoiceArea.hidden = false; grantCameraButton.hidden = true;
+            setupStatus.textContent = 'Access granted. Choose your document camera, then start it.'; firstCameraSelect.focus();
+          } catch (error) {
+            const messages = {
+              NotAllowedError: 'Camera permission was denied. Allow camera access in Chrome’s site settings, then try again.',
+              NotFoundError: 'No camera was found. Connect your document camera and retry.',
+              NotReadableError: 'The camera is in use by another app. Close that app and retry.'
+            };
+            setupStatus.textContent = messages[error.name] || `Could not access a camera: ${error.message || 'unknown error'}.`;
+            grantCameraButton.disabled = false;
+          } finally { if (permissionStream) permissionStream.getTracks().forEach(track => track.stop()); }
+        }
+        function stopCamera(message = 'Camera stopped.') {
+          stopStreamOnly(); video.srcObject = null; video.hidden = true; placeholder.hidden = false;
+          startButton.disabled = false; stopButton.disabled = true; snapshotButton.disabled = true;
+          video.pause(); freezeButton.disabled = true; freezeButton.textContent = 'Freeze frame'; freezeButton.setAttribute('aria-pressed', 'false');
+          annotationActive = false; setAdjustmentsEnabled(false); resetView(); updateAnnotationControls(); setStatus(message);
         }
         function takeSnapshot() {
           if (!stream || !video.videoWidth || !video.videoHeight) return;
-          canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-          const context = canvas.getContext('2d');
+          const rect = stage.getBoundingClientRect();
+          const dpr = window.devicePixelRatio || 1;
+          const width = Math.max(1, Math.round(rect.width * dpr));
+          const height = Math.max(1, Math.round(rect.height * dpr));
+          captureCanvas.width = width; captureCanvas.height = height;
+          const context = captureCanvas.getContext('2d');
+          context.fillStyle = '#101827'; context.fillRect(0, 0, width, height);
+          const cssWidth = rect.width, cssHeight = rect.height;
+          const fitScale = Math.min(cssWidth / video.videoWidth, cssHeight / video.videoHeight);
+          const drawWidth = video.videoWidth * fitScale, drawHeight = video.videoHeight * fitScale;
+          context.save(); context.scale(dpr, dpr);
+          context.translate(cssWidth / 2 + offsetX, cssHeight / 2 + offsetY);
+          context.scale(scale, scale);
           context.filter = `brightness(${brightness.value}%) contrast(${contrast.value}%)`;
-          context.drawImage(video, 0, 0, canvas.width, canvas.height);
-          canvas.toBlob(blob => {
+          context.drawImage(video, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+          context.restore();
+          context.filter = 'none'; context.drawImage(annotationCanvas, 0, 0, width, height);
+          captureCanvas.toBlob(blob => {
             if (!blob) { setStatus('Could not create the snapshot. Please try again.'); return; }
             const url = URL.createObjectURL(blob);
             const filename = `document-camera-${new Date().toISOString().replace(/[:.]/g, '-')}.png`;
             const link = document.createElement('a'); link.href = url; link.download = filename; link.click();
-            const item = document.createElement('div'); const image = document.createElement('img');
+            const item = document.createElement('div'), image = document.createElement('img');
             image.src = url; image.alt = `Snapshot taken ${new Date().toLocaleString()}`;
             const previewLink = document.createElement('a'); previewLink.className = 'snapshot-link';
             previewLink.href = url; previewLink.download = filename; previewLink.textContent = 'Download snapshot';
             item.append(image, previewLink); snapshots.prepend(item); setStatus('Snapshot downloaded.');
           }, 'image/png');
         }
+        function pointFromEvent(event) {
+          const rect = stage.getBoundingClientRect();
+          return { x: (event.clientX - rect.left) / rect.width, y: (event.clientY - rect.top) / rect.height };
+        }
 
+        grantCameraButton.addEventListener('click', requestCameraAccess);
+        startSelectedCameraButton.addEventListener('click', async () => {
+          startSelectedCameraButton.disabled = true;
+          const started = await startCamera(firstCameraSelect.value);
+          startSelectedCameraButton.disabled = false;
+          setupStatus.textContent = started ? 'Camera started.' : status.textContent;
+          if (started) setupScreen.hidden = true;
+        });
         openMenuButton.addEventListener('click', () => setMenuOpen(true));
         closeMenuButton.addEventListener('click', () => setMenuOpen(false));
         backdrop.addEventListener('click', () => setMenuOpen(false));
@@ -237,7 +370,7 @@
           } catch { setStatus('Could not enter fullscreen. Check your browser settings.'); }
         });
         document.addEventListener('fullscreenchange', syncFullscreenButton);
-        startButton.addEventListener('click', startCamera);
+        startButton.addEventListener('click', async () => { if (await startCamera()) setupScreen.hidden = true; });
         stopButton.addEventListener('click', () => stopCamera());
         freezeButton.addEventListener('click', async () => {
           if (!stream) return;
@@ -248,6 +381,26 @@
             video.pause(); freezeButton.textContent = 'Resume live'; freezeButton.setAttribute('aria-pressed', 'true'); setStatus('Frame frozen. Click Resume live to continue.');
           }
         });
+        annotateButton.addEventListener('click', () => {
+          annotationActive = !annotationActive; updateAnnotationControls();
+          setStatus(annotationActive ? 'Annotation mode on. Draw on the camera image.' : 'Annotation mode off.');
+        });
+        annotationCanvas.addEventListener('pointerdown', event => {
+          if (!annotationActive || !stream) return;
+          event.preventDefault(); annotationCanvas.setPointerCapture(event.pointerId);
+          const point = pointFromEvent(event);
+          drawingStroke = { color: inkColor.value, size: Number(inkSize.value), points: [point] };
+          strokes.push(drawingStroke); redrawAnnotations(); updateAnnotationControls();
+        });
+        annotationCanvas.addEventListener('pointermove', event => {
+          if (!drawingStroke) return;
+          drawingStroke.points.push(pointFromEvent(event)); redrawAnnotations();
+        });
+        function finishStroke() { drawingStroke = null; updateAnnotationControls(); }
+        annotationCanvas.addEventListener('pointerup', finishStroke);
+        annotationCanvas.addEventListener('pointercancel', finishStroke);
+        undoButton.addEventListener('click', () => { strokes.pop(); drawingStroke = null; redrawAnnotations(); updateAnnotationControls(); });
+        clearButton.addEventListener('click', () => { strokes.length = 0; drawingStroke = null; redrawAnnotations(); updateAnnotationControls(); });
         snapshotButton.addEventListener('click', takeSnapshot);
         zoomInButton.addEventListener('click', () => setZoom(scale + ZOOM_STEP));
         zoomOutButton.addEventListener('click', () => setZoom(scale - ZOOM_STEP));
@@ -256,9 +409,9 @@
         brightness.addEventListener('change', () => setAdjustmentsEnabled(Boolean(stream)));
         contrast.addEventListener('change', () => setAdjustmentsEnabled(Boolean(stream)));
         resetAdjustmentsButton.addEventListener('click', resetAdjustments);
-        cameraSelect.addEventListener('change', async () => { if (stream) { stopCamera('Switching camera…'); await startCamera(); } });
+        cameraSelect.addEventListener('change', async () => { if (stream) { stopCamera('Switching camera…'); if (await startCamera(cameraSelect.value)) setupScreen.hidden = true; } });
         stage.addEventListener('pointerdown', event => {
-          if (!stream || scale <= 1) return;
+          if (!stream || annotationActive || scale <= 1) return;
           drag = { x: event.clientX, y: event.clientY, offsetX, offsetY };
           stage.setPointerCapture(event.pointerId); renderView();
         });
@@ -268,16 +421,14 @@
         });
         function endDrag() { drag = null; renderView(); }
         stage.addEventListener('pointerup', endDrag); stage.addEventListener('pointercancel', endDrag);
-        stage.addEventListener('wheel', event => {
-          if (!stream) return;
-          event.preventDefault(); setZoom(scale + (event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP));
-        }, { passive: false });
+        stage.addEventListener('wheel', event => { if (stream) { event.preventDefault(); setZoom(scale + (event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP)); } }, { passive: false });
         video.addEventListener('loadedmetadata', refreshCameras);
+        window.addEventListener('resize', resizeAnnotationCanvas);
         window.addEventListener('beforeunload', () => {
           if (stream) stream.getTracks().forEach(track => track.stop());
           snapshots.querySelectorAll('img').forEach(image => URL.revokeObjectURL(image.src));
         });
-        refreshCameras(); renderView(); syncFullscreenButton();
+        refreshCameras(); resizeAnnotationCanvas(); renderView(); syncFullscreenButton();
       })();
     </script>
   </body>
