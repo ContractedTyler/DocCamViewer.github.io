@@ -6,65 +6,28 @@
     <title>DocCam Viewer</title>
     <style>
       body {
-        font-family: Arial, sans-serif;
         margin: 2rem;
-        text-align: center;
-        background: #f7f7f7;
         color: #1f2937;
+        background: #f7f7f7;
+        font-family: Arial, sans-serif;
+        line-height: 1.5;
       }
-      .card {
-        max-width: 560px;
-        margin: 0 auto;
-        background: #ffffff;
-        border-radius: 12px;
+      main {
+        box-sizing: border-box;
+        max-width: 600px;
+        margin: 3rem auto;
         padding: 2rem;
+        background: #fff;
+        border-radius: 12px;
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-      }
-      a.button {
-        display: inline-block;
-        background: #2563eb;
-        color: #ffffff;
-        text-decoration: none;
-        padding: 0.85rem 1.25rem;
-        border-radius: 8px;
-        font-weight: 600;
-        margin-top: 1rem;
-      }
-      .muted {
-        color: #4b5563;
       }
     </style>
   </head>
   <body>
-    <div class="card">
+    <main>
       <h1>DocCam Viewer</h1>
-      <p id="status">Checking if the extension is available...</p>
-      <p class="muted">
-        Chrome blocks automatic navigation from a website to an installed extension for security reasons.
-        If the extension is installed, use the button below to open it.
-      </p>
-      <a id="extension-link" class="button" href="chrome-extension://njkaoncgdacajckgpjnphkldioicgopb/app/index.html">
-        Open DocCam Viewer
-      </a>
-    </div>
-
-    <script>
-      const extensionUrl = "chrome-extension://njkaoncgdacajckgpjnphkldioicgopb/app/index.html";
-      const status = document.getElementById("status");
-      const link = document.getElementById("extension-link");
-
-      link.href = extensionUrl;
-
-      // Best-effort launch. Chrome may block automatic navigation, which is expected.
-      try {
-        window.location.href = extensionUrl;
-      } catch (error) {
-        // Ignore; Chrome prevents this from a normal web page.
-      }
-
-      setTimeout(() => {
-        status.textContent = "Automatic launch was blocked by Chrome. Please click the button above to open the extension.";
-      }, 1000);
-    </script>
+      <p>This website cannot open the extension directly. Chrome blocks websites from navigating to <code>chrome-extension://</code> pages, which can result in an “invalid” page.</p>
+      <p>To open DocCam Viewer, use its extension button in Chrome. To make this site open the extension from a button, the extension itself must be updated to explicitly handle a request from this site.</p>
+    </main>
   </body>
 </html>
