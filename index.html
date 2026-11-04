@@ -11,14 +11,14 @@
 </head>
 <body>
 <main class="app" id="app">
-  <div class="stage" id="stage" aria-label="Camera preview. Use Draw to annotate, or open Options for zoom, rotation, and mirror controls.">
+  <div class="stage" id="stage" aria-label="Camera preview. Use Draw to annotate, or open camera settings for zoom, rotation, and mirror controls.">
     <video id="video" autoplay muted playsinline hidden></video>
     <canvas id="ink" aria-label="Annotation canvas"></canvas>
     <div class="placeholder" id="placeholder"><strong>Document Camera</strong><p>Set up your camera to begin.</p></div>
   </div>
   <nav class="floatbar" id="floatbar" aria-label="Quick camera controls">
     <button class="drag-handle" id="bar-grip" type="button" title="Drag toolbar to move" aria-label="Drag toolbar to move">⠿</button>
-    <button id="open-menu" type="button" aria-label="Open camera options" aria-controls="menu" aria-expanded="false" title="Options">⚙</button>
+    <button id="open-menu" type="button" aria-label="Open camera settings" aria-controls="menu" aria-expanded="false" title="Camera settings"><svg class="settings-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path d="M19.14 12.94a7.5 7.5 0 0 0 .05-.94 7.5 7.5 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.3 7.3 0 0 0-1.63-.94l-.36-2.54A.49.49 0 0 0 13.9 2h-3.8a.49.49 0 0 0-.49.42L9.25 4.96c-.59.23-1.14.55-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.48a.5.5 0 0 0 .12.64l2.03 1.58a7.5 7.5 0 0 0-.05.94c0 .32.02.63.05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.49.39 1.04.71 1.63.94l.36 2.54a.49.49 0 0 0 .49.42h3.8a.49.49 0 0 0 .49-.42l.36-2.54c.59-.23 1.14-.55 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg></button>
     <button id="start" class="primary" type="button" title="Start camera">▶<span class="optional-label"> Start</span></button>
     <button id="stop" type="button" disabled title="Stop camera">■<span class="optional-label"> Stop</span></button>
     <button id="freeze" type="button" disabled aria-pressed="false" title="Freeze frame">Ⅱ<span class="optional-label"> Freeze</span></button>
@@ -33,40 +33,15 @@
     <button id="snapshot" class="primary" type="button" disabled title="Take screenshot">◎<span class="optional-label"> Screenshot</span></button>
     <button id="fullscreen" type="button" aria-label="Enter fullscreen" title="Enter fullscreen">⛶</button>
   </nav>
-  <aside class="panel closed" id="menu" aria-label="Camera options" aria-hidden="true" inert>
-    <div class="panel-head"><button class="panel-grip" id="panel-grip" type="button" title="Drag panel to move" aria-label="Drag options panel to move">⠿</button><h1>Options</h1><button id="close-menu" type="button" aria-label="Close options">×</button></div>
+  <aside class="panel closed" id="menu" aria-label="Camera settings" aria-hidden="true" inert>
+    <div class="panel-head"><button class="panel-grip" id="panel-grip" type="button" title="Drag panel to move" aria-label="Drag camera settings panel to move">⠿</button><h1>Camera settings</h1><button id="close-menu" type="button" aria-label="Close camera settings">×</button></div>
     <p id="status" role="status" aria-live="polite">Camera access starts when you choose Allow camera access.</p>
-    <details id="camera-options" open><summary>Camera &amp; view</summary><div class="section">
-      <label for="camera">Choose camera</label><select id="camera"><option value="">System default camera</option></select>
-      <p class="hint">Requests 1920 × 1080 when supported; actual resolution depends on the selected camera.</p>
-      <div class="grid"><button id="zoom-out" type="button" disabled>− Zoom out</button><button id="zoom-in" type="button" disabled>+ Zoom in</button></div>
-      <div class="grid"><output class="zoom-readout" id="zoom-value">100%</output><button id="reset-view" type="button" disabled>Reset view</button></div>
-      <div class="grid"><button id="rotate-left" type="button" disabled>↶ Rotate left</button><button id="rotate-right" type="button" disabled>↷ Rotate right</button></div>
-      <label class="check-label" for="mirror"><input id="mirror" type="checkbox" disabled> Mirror image</label>
-      <button id="reset-view-options" type="button" disabled>Reset zoom, rotation &amp; mirror</button>
-    </div></details>
-    <details><summary>Annotation tools</summary><div class="section">
-      <div class="toolrow"><button id="pen" type="button" class="selected" aria-pressed="true" disabled>Pen</button><button id="eraser" type="button" aria-pressed="false" disabled>Eraser</button></div>
-      <label>Quick pen colors</label><div class="color-swatches menu-colors" aria-label="Quick pen color"><button class="swatch red" type="button" data-color="#ef3038" aria-label="Red" aria-pressed="true" title="Red"></button><button class="swatch blue" type="button" data-color="#2473e8" aria-label="Blue" aria-pressed="false" title="Blue"></button><button class="swatch green" type="button" data-color="#168447" aria-label="Green" aria-pressed="false" title="Green"></button><button class="swatch black" type="button" data-color="#172033" aria-label="Black" aria-pressed="false" title="Black"></button></div>
-      <div class="grid"><label for="ink-color">Custom color<input id="ink-color" type="color" value="#ef3038" disabled></label><label for="ink-size">Tool size<select id="ink-size" disabled><option value="2">Fine</option><option value="4" selected>Medium</option><option value="8">Thick</option><option value="12">Extra thick</option></select></label></div>
-      <div class="grid"><button id="undo" type="button" disabled>Undo stroke</button><button id="erase-all-menu" type="button" disabled>Erase all</button></div>
-      <p class="hint">Enable Draw, choose Pen or Eraser, then draw on the image. Toolbar movement is paused during a stroke.</p>
-    </div></details>
-    <details><summary>Image adjustments</summary><div class="section">
-      <div class="adjust"><label for="brightness">Brightness <output id="brightness-out">100%</output></label><input id="brightness" type="range" min="50" max="150" value="100" disabled></div>
-      <div class="adjust"><label for="contrast">Contrast <output id="contrast-out">100%</output></label><input id="contrast" type="range" min="50" max="150" value="100" disabled></div>
-      <button id="reset-adjust" type="button" disabled>Reset adjustments</button>
-    </div></details>
-    <details><summary>Screenshots <span id="snapshot-count"></span></summary><div class="section"><p class="hint">Screenshots download at 1920 × 1080 and include annotations.</p><div class="snapshots" id="snapshots" aria-live="polite"></div></div></details>
-    <p class="hint">Camera and display preferences are saved only in this browser.</p>
+    <details id="camera-options" open><summary>Camera &amp; view</summary><div class="section"><label for="camera">Choose camera</label><select id="camera"><option value="">System default camera</option></select><p class="hint">Requests 1920 × 1080 when supported; actual resolution depends on the selected camera.</p><div class="grid"><button id="zoom-out" type="button" disabled>− Zoom out</button><button id="zoom-in" type="button" disabled>+ Zoom in</button></div><div class="grid"><output class="zoom-readout" id="zoom-value">100%</output><button id="reset-view" type="button" disabled>Reset view</button></div><div class="grid"><button id="rotate-left" type="button" disabled>↶ Rotate left</button><button id="rotate-right" type="button" disabled>↷ Rotate right</button></div><label class="check-label" for="mirror"><input id="mirror" type="checkbox" disabled> Mirror image</label><button id="reset-view-options" type="button" disabled>Reset zoom, rotation &amp; mirror</button></div></details>
+    <details><summary>Annotation tools</summary><div class="section"><div class="toolrow"><button id="pen" type="button" class="selected" aria-pressed="true" disabled>Pen</button><button id="eraser" type="button" aria-pressed="false" disabled>Eraser</button></div><label>Quick pen colors</label><div class="color-swatches menu-colors" aria-label="Quick pen color"><button class="swatch red" type="button" data-color="#ef3038" aria-label="Red" aria-pressed="true" title="Red"></button><button class="swatch blue" type="button" data-color="#2473e8" aria-label="Blue" aria-pressed="false" title="Blue"></button><button class="swatch green" type="button" data-color="#168447" aria-label="Green" aria-pressed="false" title="Green"></button><button class="swatch black" type="button" data-color="#172033" aria-label="Black" aria-pressed="false" title="Black"></button></div><div class="grid"><label for="ink-color">Custom color<input id="ink-color" type="color" value="#ef3038" disabled></label><label for="ink-size">Tool size<select id="ink-size" disabled><option value="2">Fine</option><option value="4" selected>Medium</option><option value="8">Thick</option><option value="12">Extra thick</option></select></label></div><div class="grid"><button id="undo" type="button" disabled>Undo stroke</button><button id="erase-all-menu" type="button" disabled>Erase all</button></div><p class="hint">Enable Draw, choose Pen or Eraser, then draw on the image. Toolbar movement is paused during a stroke.</p></div></details>
+    <details><summary>Image adjustments</summary><div class="section"><div class="adjust"><label for="brightness">Brightness <output id="brightness-out">100%</output></label><input id="brightness" type="range" min="50" max="150" value="100" disabled></div><div class="adjust"><label for="contrast">Contrast <output id="contrast-out">100%</output></label><input id="contrast" type="range" min="50" max="150" value="100" disabled></div><button id="reset-adjust" type="button" disabled>Reset adjustments</button></div></details>
+    <details><summary>Screenshots <span id="snapshot-count"></span></summary><div class="section"><p class="hint">Screenshots download at 1920 × 1080 and include annotations.</p><div class="snapshots" id="snapshots" aria-live="polite"></div></div></details><p class="hint">Camera and display preferences are saved only in this browser.</p>
   </aside>
-  <section class="setup" id="setup" role="dialog" aria-modal="true" aria-labelledby="setup-title">
-    <div class="card"><h1 id="setup-title">Set up your document camera</h1><p>Allow camera access, then choose which camera to use. Your camera feed stays in this browser and is not uploaded.</p>
-      <button class="primary" id="allow" type="button">Allow camera access</button>
-      <div id="choose-wrap" hidden><label for="first-camera">Choose a camera</label><select id="first-camera"></select><button class="primary" id="start-selected" type="button">Start selected camera</button></div>
-      <p id="setup-status" role="status" aria-live="polite">Permission is requested only after you click Allow camera access.</p>
-    </div>
-  </section>
+  <section class="setup" id="setup" role="dialog" aria-modal="true" aria-labelledby="setup-title"><div class="card"><h1 id="setup-title">Set up your document camera</h1><p>Allow camera access, then choose which camera to use. Your camera feed stays in this browser and is not uploaded.</p><button class="primary" id="allow" type="button">Allow camera access</button><div id="choose-wrap" hidden><label for="first-camera">Choose a camera</label><select id="first-camera"></select><button class="primary" id="start-selected" type="button">Start selected camera</button></div><p id="setup-status" role="status" aria-live="polite">Permission is requested only after you click Allow camera access.</p></div></section>
 </main><canvas id="capture" hidden></canvas>
 </body>
 </html>
