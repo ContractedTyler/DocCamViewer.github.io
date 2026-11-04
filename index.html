@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DocCam Viewer</title>
+    <title>Open DocCam Viewer</title>
     <style>
       body {
         margin: 2rem;
@@ -20,14 +20,45 @@
         background: #fff;
         border-radius: 12px;
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        text-align: center;
+      }
+      .button {
+        display: inline-block;
+        margin: 1rem 0;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        background: #2563eb;
+        color: #fff;
+        font-size: 1.1rem;
+        font-weight: 700;
+        text-decoration: none;
+      }
+      .button:focus,
+      .button:hover {
+        background: #1d4ed8;
+        text-decoration: underline;
+      }
+      .help {
+        color: #4b5563;
       }
     </style>
   </head>
   <body>
     <main>
-      <h1>DocCam Viewer</h1>
-      <p>This website cannot open the extension directly. Chrome blocks websites from navigating to <code>chrome-extension://</code> pages, which can result in an “invalid” page.</p>
-      <p>To open DocCam Viewer, use its extension button in Chrome. To make this site open the extension from a button, the extension itself must be updated to explicitly handle a request from this site.</p>
+      <h1>Ready to open DocCam Viewer?</h1>
+      <p>Click the button below to open the DocCam Viewer extension.</p>
+      <a
+        class="button"
+        href="chrome-extension://njkaoncgdacajckgpjnphkldioicgopb/app/index.html"
+        target="_blank"
+        rel="noopener"
+      >
+        Open DocCam Viewer
+      </a>
+      <p class="help">
+        If Chrome says it can’t open the page, open DocCam Viewer from the Extensions button in Chrome.
+        The extension may need to allow this page to open its app page.
+      </p>
     </main>
   </body>
 </html>
