@@ -3,62 +3,279 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Open DocCam Viewer</title>
+    <meta name="theme-color" content="#10213a" />
+    <title>Document Camera</title>
     <style>
-      body {
-        margin: 2rem;
-        color: #1f2937;
-        background: #f7f7f7;
-        font-family: Arial, sans-serif;
-        line-height: 1.5;
+      :root {
+        color-scheme: light;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #172033;
+        background: #edf2f8;
       }
-      main {
-        box-sizing: border-box;
-        max-width: 600px;
-        margin: 3rem auto;
-        padding: 2rem;
-        background: #fff;
-        border-radius: 12px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-        text-align: center;
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; }
+      .app { max-width: 1200px; margin: 0 auto; padding: 1.25rem; }
+      header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+      h1 { margin: 0; font-size: clamp(1.45rem, 3vw, 2rem); }
+      .layout { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 1rem; align-items: start; }
+      .viewer, .panel { background: white; border-radius: 14px; box-shadow: 0 8px 26px #162b4814; }
+      .viewer { overflow: hidden; }
+      .stage {
+        position: relative; display: grid; place-items: center; width: 100%; aspect-ratio: 16 / 9;
+        min-height: 260px; overflow: hidden; background: #101827; touch-action: none; user-select: none;
       }
-      .button {
-        display: inline-block;
-        margin: 1rem 0;
-        padding: 1rem 1.5rem;
-        border-radius: 8px;
-        background: #2563eb;
-        color: #fff;
-        font-size: 1.1rem;
-        font-weight: 700;
-        text-decoration: none;
+      video { display: block; width: 100%; height: 100%; object-fit: contain; transform-origin: center; }
+      .placeholder { position: absolute; inset: 0; display: grid; place-content: center; gap: .5rem; padding: 1rem; color: white; text-align: center; }
+      .placeholder[hidden] { display: none; }
+      .placeholder p { margin: 0; color: #d3dceb; }
+      .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem; padding: .8rem; border-top: 1px solid #e6ebf2; }
+      button, select { font: inherit; }
+      button, select { min-height: 42px; border: 1px solid #cbd5e1; border-radius: 8px; background: white; color: #172033; padding: .55rem .8rem; }
+      button { cursor: pointer; font-weight: 600; }
+      button:hover:not(:disabled) { background: #f0f5ff; border-color: #8ba9dc; }
+      button:focus-visible, select:focus-visible, a:focus-visible { outline: 3px solid #78a7ff; outline-offset: 2px; }
+      button.primary { background: #175cd3; border-color: #175cd3; color: white; }
+      button.primary:hover:not(:disabled) { background: #124daf; }
+      button:disabled, select:disabled { cursor: not-allowed; opacity: .5; }
+      .zoom-readout { min-width: 4.5rem; text-align: center; font-variant-numeric: tabular-nums; }
+      .panel { padding: 1rem; }
+      .panel h2 { margin: 0 0 .75rem; font-size: 1.1rem; }
+      .panel label { display: block; margin: .85rem 0 .35rem; font-weight: 650; }
+      .panel select { width: 100%; }
+      .hint, #status { color: #526078; font-size: .92rem; }
+      #status { min-height: 2.8em; margin: .75rem 0 0; }
+      .snapshots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; margin-top: .75rem; }
+      .snapshots img { display: block; width: 100%; border-radius: 7px; background: #e7edf5; }
+      .snapshot-link { display: block; color: #175cd3; font-size: .85rem; overflow-wrap: anywhere; }
+      .footnote { margin: 1rem 0 0; color: #526078; font-size: .85rem; }
+      @media (max-width: 760px) {
+        .app { padding: .8rem; }
+        .layout { grid-template-columns: 1fr; }
+        .stage { min-height: 220px; }
       }
-      .button:focus,
-      .button:hover {
-        background: #1d4ed8;
-        text-decoration: underline;
-      }
-      .help {
-        color: #4b5563;
-      }
+      @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } }
     </style>
   </head>
   <body>
-    <main>
-      <h1>Ready to open DocCam Viewer?</h1>
-      <p>Click the button below to open the DocCam Viewer extension.</p>
-      <a
-        class="button"
-        href="chrome-extension://njkaoncgdacajckgpjnphkldioicgopb/app/index.html"
-        target="_blank"
-        rel="noopener"
-      >
-        Open DocCam Viewer
-      </a>
-      <p class="help">
-        If Chrome says it can’t open the page, open DocCam Viewer from the Extensions button in Chrome.
-        The extension may need to allow this page to open its app page.
-      </p>
+    <main class="app">
+      <header><h1>Document Camera</h1></header>
+      <div class="layout">
+        <section class="viewer" aria-label="Document camera viewer">
+          <div class="stage" id="stage" aria-label="Camera preview. When zoomed in, drag to pan the image.">
+            <video id="video" autoplay muted playsinline hidden></video>
+            <div class="placeholder" id="placeholder">
+              <strong>Camera preview</strong>
+              <p>Choose a camera and select Start camera to begin.</p>
+            </div>
+          </div>
+          <div class="toolbar" aria-label="Camera controls">
+            <button type="button" class="primary" id="start">Start camera</button>
+            <button type="button" id="stop" disabled>Stop</button>
+            <span aria-hidden="true">|</span>
+            <button type="button" id="zoom-out" aria-label="Zoom out" disabled>−</button>
+            <span class="zoom-readout" id="zoom-readout" aria-live="polite">100%</span>
+            <button type="button" id="zoom-in" aria-label="Zoom in" disabled>+</button>
+            <button type="button" id="reset-view" disabled>Reset view</button>
+            <button type="button" class="primary" id="snapshot" disabled>Take snapshot</button>
+          </div>
+        </section>
+        <aside class="panel">
+          <h2>Camera setup</h2>
+          <label for="camera-select">Camera</label>
+          <select id="camera-select"><option value="">Default camera</option></select>
+          <p class="hint">Connect your document camera before starting. If it is not listed, allow camera access and refresh this page.</p>
+          <p id="status" role="status" aria-live="polite">Camera access starts only when you click “Start camera.”</p>
+          <h2>Snapshots</h2>
+          <p class="hint">Snapshots are saved to your computer when you click Take snapshot.</p>
+          <div class="snapshots" id="snapshots" aria-live="polite"></div>
+          <p class="footnote">Camera video stays in this browser tab. This page does not upload video or snapshots.</p>
+        </aside>
+      </div>
     </main>
+    <canvas id="capture" hidden></canvas>
+    <script>
+      (() => {
+        const video = document.getElementById('video');
+        const stage = document.getElementById('stage');
+        const placeholder = document.getElementById('placeholder');
+        const cameraSelect = document.getElementById('camera-select');
+        const status = document.getElementById('status');
+        const startButton = document.getElementById('start');
+        const stopButton = document.getElementById('stop');
+        const snapshotButton = document.getElementById('snapshot');
+        const zoomInButton = document.getElementById('zoom-in');
+        const zoomOutButton = document.getElementById('zoom-out');
+        const resetButton = document.getElementById('reset-view');
+        const zoomReadout = document.getElementById('zoom-readout');
+        const canvas = document.getElementById('capture');
+        const snapshots = document.getElementById('snapshots');
+        let stream = null;
+        let scale = 1;
+        let offsetX = 0;
+        let offsetY = 0;
+        let drag = null;
+        const MIN_ZOOM = 1;
+        const MAX_ZOOM = 4;
+        const ZOOM_STEP = 0.25;
+
+        function setStatus(message) { status.textContent = message; }
+        function renderView() {
+          video.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+          zoomReadout.textContent = `${Math.round(scale * 100)}%`;
+          zoomInButton.disabled = !stream || scale >= MAX_ZOOM;
+          zoomOutButton.disabled = !stream || scale <= MIN_ZOOM;
+          resetButton.disabled = !stream || (scale === MIN_ZOOM && offsetX === 0 && offsetY === 0);
+          stage.style.cursor = stream && scale > 1 ? (drag ? 'grabbing' : 'grab') : 'default';
+        }
+        function resetView() { scale = 1; offsetX = 0; offsetY = 0; renderView(); }
+        function setZoom(next) {
+          scale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, next));
+          if (scale === MIN_ZOOM) { offsetX = 0; offsetY = 0; }
+          renderView();
+        }
+        function stopCamera() {
+          if (stream) stream.getTracks().forEach(track => track.stop());
+          stream = null;
+          video.srcObject = null;
+          video.hidden = true;
+          placeholder.hidden = false;
+          startButton.disabled = false;
+          stopButton.disabled = true;
+          snapshotButton.disabled = true;
+          cameraSelect.disabled = false;
+          resetView();
+          setStatus('Camera stopped.');
+        }
+        async function refreshCameras() {
+          if (!navigator.mediaDevices?.enumerateDevices) return;
+          try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const cameras = devices.filter(device => device.kind === 'videoinput');
+            const selected = cameraSelect.value;
+            cameraSelect.replaceChildren(new Option(cameras.length ? 'System default camera' : 'No camera found', ''));
+            cameras.forEach((camera, index) => {
+              cameraSelect.add(new Option(camera.label || `Camera ${index + 1}`, camera.deviceId));
+            });
+            if ([...cameraSelect.options].some(option => option.value === selected)) cameraSelect.value = selected;
+          } catch (error) {
+            setStatus('Could not list cameras. Check the browser’s camera permissions.');
+          }
+        }
+        async function startCamera() {
+          if (!navigator.mediaDevices?.getUserMedia) {
+            setStatus('Camera access is not available. Open this page in a supported browser over HTTPS.');
+            return;
+          }
+          startButton.disabled = true;
+          setStatus('Waiting for camera permission…');
+          try {
+            const deviceId = cameraSelect.value;
+            const constraints = { audio: false, video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'environment' } };
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
+            video.srcObject = stream;
+            video.hidden = false;
+            placeholder.hidden = true;
+            await video.play();
+            stopButton.disabled = false;
+            snapshotButton.disabled = false;
+            cameraSelect.disabled = false;
+            setStatus('Camera is on. Drag the image when zoomed in to pan.');
+            await refreshCameras();
+            cameraSelect.disabled = false;
+            renderView();
+          } catch (error) {
+            if (stream) stream.getTracks().forEach(track => track.stop());
+            stream = null;
+            video.srcObject = null;
+            video.hidden = true;
+            placeholder.hidden = false;
+            cameraSelect.disabled = false;
+            startButton.disabled = false;
+            const messages = {
+              NotAllowedError: 'Camera permission was denied. Allow camera access for this site in Chrome, then try again.',
+              NotFoundError: 'No camera was found. Connect a document camera and try again.',
+              NotReadableError: 'The camera is already in use by another app. Close that app and try again.',
+              OverconstrainedError: 'That camera is unavailable. Select another camera and try again.'
+            };
+            setStatus(messages[error.name] || `Could not start camera: ${error.message || 'unknown error'}.`);
+          }
+        }
+        function takeSnapshot() {
+          if (!stream || !video.videoWidth || !video.videoHeight) return;
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          const context = canvas.getContext('2d');
+          context.drawImage(video, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob(blob => {
+            if (!blob) { setStatus('Could not create the snapshot. Please try again.'); return; }
+            const url = URL.createObjectURL(blob);
+            const date = new Date().toISOString().replace(/[:.]/g, '-');
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `document-camera-${date}.png`;
+            link.click();
+            const item = document.createElement('div');
+            const image = document.createElement('img');
+            image.src = url;
+            image.alt = `Snapshot taken ${new Date().toLocaleString()}`;
+            const previewLink = document.createElement('a');
+            previewLink.className = 'snapshot-link';
+            previewLink.href = url;
+            previewLink.download = link.download;
+            previewLink.textContent = 'Download snapshot';
+            item.append(image, previewLink);
+            snapshots.prepend(item);
+            setStatus('Snapshot downloaded.');
+          }, 'image/png');
+        }
+
+        startButton.addEventListener('click', startCamera);
+        stopButton.addEventListener('click', stopCamera);
+        snapshotButton.addEventListener('click', takeSnapshot);
+        zoomInButton.addEventListener('click', () => setZoom(scale + ZOOM_STEP));
+        zoomOutButton.addEventListener('click', () => setZoom(scale - ZOOM_STEP));
+        resetButton.addEventListener('click', resetView);
+        cameraSelect.addEventListener('change', async () => {
+          if (!stream) return;
+          if (stream) stream.getTracks().forEach(track => track.stop());
+          stream = null;
+          video.srcObject = null;
+          video.hidden = true;
+          placeholder.hidden = false;
+          startButton.disabled = false;
+          stopButton.disabled = true;
+          snapshotButton.disabled = true;
+          resetView();
+          await startCamera();
+        });
+        stage.addEventListener('pointerdown', event => {
+          if (!stream || scale <= 1) return;
+          drag = { x: event.clientX, y: event.clientY, offsetX, offsetY };
+          stage.setPointerCapture(event.pointerId);
+          renderView();
+        });
+        stage.addEventListener('pointermove', event => {
+          if (!drag) return;
+          offsetX = drag.offsetX + event.clientX - drag.x;
+          offsetY = drag.offsetY + event.clientY - drag.y;
+          renderView();
+        });
+        function endDrag() { drag = null; renderView(); }
+        stage.addEventListener('pointerup', endDrag);
+        stage.addEventListener('pointercancel', endDrag);
+        stage.addEventListener('wheel', event => {
+          if (!stream) return;
+          event.preventDefault();
+          setZoom(scale + (event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP));
+        }, { passive: false });
+        video.addEventListener('loadedmetadata', refreshCameras);
+        window.addEventListener('beforeunload', () => {
+          if (stream) stream.getTracks().forEach(track => track.stop());
+          snapshots.querySelectorAll('img').forEach(image => URL.revokeObjectURL(image.src));
+        });
+        refreshCameras();
+        renderView();
+      })();
+    </script>
   </body>
 </html>
