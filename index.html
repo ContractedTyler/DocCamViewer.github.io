@@ -1,289 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#10213a">
-  <title>Document Camera</title>
-  <style>
-    :root { font: 16px system-ui, -apple-system, "Segoe UI", sans-serif; color: #172033; background: #101827; }
-    * { box-sizing: border-box; }
-    body { margin: 0; }
-    button, select, input { font: inherit; }
-    button, select, input[type="color"] { min-height: 42px; padding: .55rem .8rem; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #172033; }
-    button { cursor: pointer; font-weight: 600; }
-    button:hover:not(:disabled) { background: #f0f5ff; }
-    button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid #78a7ff; outline-offset: 2px; }
-    button:disabled, select:disabled, input:disabled { opacity: .5; cursor: not-allowed; }
-    button.primary { color: #fff; background: #175cd3; border-color: #175cd3; }
-    button.primary:hover:not(:disabled) { background: #124daf; }
-    [hidden] { display: none !important; }
-    .app { position: relative; display: flex; width: 100%; height: 100vh; height: 100dvh; overflow: hidden; background: #101827; }
-    .topbar { position: absolute; z-index: 4; inset: max(.75rem, env(safe-area-inset-top)) max(.75rem, env(safe-area-inset-right)) auto max(.75rem, env(safe-area-inset-left)); display: flex; justify-content: space-between; pointer-events: none; }
-    .topbar button { min-width: 46px; min-height: 46px; color: white; background: #111827dd; border-color: #ffffff55; box-shadow: 0 2px 12px #0005; pointer-events: auto; }
-    .viewer { display: flex; flex: 1; min-width: 0; }
-    .stage { position: relative; display: grid; flex: 1; min-height: 0; place-items: center; overflow: hidden; background: #101827; touch-action: none; user-select: none; }
-    .stage video { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; object-fit: contain; transform-origin: center; }
-    #ink { position: absolute; z-index: 2; inset: 0; display: block; width: 100%; height: 100%; pointer-events: none; touch-action: none; }
-    #ink.drawing { pointer-events: auto; cursor: crosshair; }
-    .placeholder { position: absolute; z-index: 3; inset: 0; display: grid; place-content: center; gap: .5rem; padding: 1rem; text-align: center; color: #fff; pointer-events: none; }
-    .placeholder p { margin: 0; color: #d3dceb; }
-    .backdrop { position: fixed; z-index: 5; inset: 0; background: #07101f88; }
-    .panel { position: fixed; z-index: 6; inset: 0 0 0 auto; width: min(400px, calc(100vw - 3.5rem)); overflow: auto; padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom)); background: #fff; box-shadow: -8px 0 30px #0004; transition: transform .2s ease; }
-    .panel.closed { transform: translateX(105%); visibility: hidden; }
-    .heading { display: flex; align-items: center; justify-content: space-between; padding-bottom: .7rem; border-bottom: 1px solid #e6ebf2; }
-    .heading h1 { margin: 0; font-size: 1.2rem; }
-    .heading button { min-width: 42px; padding: .45rem; font-size: 1.2rem; }
-    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin: .8rem 0 1rem; }
-    .actions button { width: 100%; }
-    .zoom { display: grid; place-items: center; border: 1px solid #e1e7ef; border-radius: 8px; font-variant-numeric: tabular-nums; }
-    details { margin: .55rem 0; border: 1px solid #e1e7ef; border-radius: 10px; background: #fff; }
-    summary { padding: .85rem .9rem; font-weight: 700; cursor: pointer; }
-    summary:focus-visible { outline: 3px solid #78a7ff; outline-offset: 2px; border-radius: 8px; }
-    .section-body { padding: 0 .9rem .9rem; }
-    .section-body label { display: block; margin: .65rem 0 .3rem; font-weight: 650; }
-    .section-body select { width: 100%; }
-    .grid, .toolrow { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-top: .55rem; }
-    .grid button, .toolrow button { width: 100%; }
-    .toolrow .selected { color: #124daf; background: #dbeafe; border-color: #175cd3; }
-    .adjust { margin: .75rem 0; }
-    .adjust label { display: flex; justify-content: space-between; gap: .5rem; margin: 0 0 .25rem; }
-    .adjust input { width: 100%; accent-color: #175cd3; }
-    .hint, #status { color: #526078; font-size: .9rem; line-height: 1.45; }
-    #status { min-height: 2.8em; margin: .8rem 0; }
-    .snapshots { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
-    .snapshots img { display: block; width: 100%; border-radius: 7px; }
-    .snapshots a { display: block; overflow-wrap: anywhere; font-size: .85rem; }
-    .setup { position: fixed; z-index: 10; inset: 0; display: grid; place-items: center; padding: 1rem; background: #07101fbb; }
-    .card { width: min(440px, 100%); padding: 1.5rem; border-radius: 16px; background: #fff; box-shadow: 0 18px 60px #0005; }
-    .card h1 { margin-top: 0; font-size: 1.4rem; }
-    .card p { color: #526078; line-height: 1.5; }
-    .card label { display: block; margin: .8rem 0 .3rem; font-weight: 650; }
-    .card select, .card button { width: 100%; margin-top: .65rem; }
-    .card button { min-height: 46px; }
-    #setup-status { min-height: 1.5em; font-size: .9rem; }
-    @media (prefers-reduced-motion: reduce) { * { transition-duration: .01ms !important; } }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#10213a">
+<title>Document Camera</title>
+<style>
+:root{font:16px system-ui,-apple-system,"Segoe UI",sans-serif;color:#172033;background:#101827}*{box-sizing:border-box}body{margin:0}button,select,input{font:inherit}button,select,input[type=color]{min-height:42px;padding:.55rem .8rem;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#172033}button{font-weight:600;cursor:pointer}button:disabled,select:disabled,input:disabled{opacity:.5;cursor:not-allowed}button:hover:not(:disabled){background:#f0f5ff}button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #78a7ff;outline-offset:2px}.primary{color:white;background:#175cd3;border-color:#175cd3}.primary:hover:not(:disabled){background:#124daf}[hidden]{display:none!important}.app{position:relative;width:100%;height:100vh;height:100dvh;overflow:hidden;background:#101827}.stage{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden;background:#101827;touch-action:none;user-select:none}.stage video{position:absolute;z-index:1;inset:0;width:100%;height:100%;object-fit:contain;transform-origin:center}#ink{position:absolute;z-index:2;inset:0;display:block;width:100%;height:100%;pointer-events:none;touch-action:none}#ink.drawing{pointer-events:auto;cursor:crosshair}.placeholder{position:absolute;z-index:3;inset:0;display:grid;place-content:center;gap:.5rem;padding:1rem;text-align:center;color:#fff;pointer-events:none}.placeholder p{margin:0;color:#d3dceb}.floatbar{position:fixed;z-index:5;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;align-items:center;gap:6px;max-width:calc(100vw - 20px);padding:7px;border:1px solid #ffffff35;border-radius:14px;background:#111827ed;box-shadow:0 6px 24px #0007;touch-action:none}.floatbar button{min-width:42px;min-height:42px;padding:.5rem .65rem;color:white;background:#263449;border-color:#526078;white-space:nowrap}.floatbar button:hover:not(:disabled){background:#3a4b64}.floatbar button.primary{background:#175cd3;border-color:#175cd3}.drag-handle{display:grid;place-items:center;min-width:30px;min-height:42px;padding:0 4px;color:#cbd5e1;cursor:move;touch-action:none;user-select:none;letter-spacing:-3px}.floatbar .labelled{display:inline-flex;align-items:center;gap:.35rem}.panel{position:fixed;z-index:6;top:14px;right:14px;width:min(380px,calc(100vw - 24px));max-height:calc(100dvh - 28px);overflow:auto;padding:.85rem;background:#fff;border:1px solid #dbe3ee;border-radius:14px;box-shadow:0 12px 38px #0006;transition:opacity .15s,visibility .15s}.panel.closed{opacity:0;visibility:hidden;pointer-events:none}.panel.moved{right:auto}.panel-head{display:flex;align-items:center;justify-content:space-between;gap:.6rem;position:sticky;top:-.85rem;z-index:2;margin:-.85rem -.85rem .75rem;padding:.75rem .85rem;background:#fff;border-bottom:1px solid #e6ebf2;border-radius:14px 14px 0 0}.panel-head h1{margin:0;font-size:1.1rem}.panel-head button{min-width:40px;padding:.4rem;font-size:1.1rem}.panel-grip{color:#69778c;cursor:move;touch-action:none;user-select:none;padding:.35rem}.panel details{margin:.5rem 0;border:1px solid #e1e7ef;border-radius:9px}.panel summary{padding:.75rem;font-weight:700;cursor:pointer}.section{padding:0 .75rem .8rem}.section label{display:block;margin:.6rem 0 .3rem;font-weight:650}.section select{width:100%}.grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.55rem}.grid button{width:100%}.toolrow{display:flex;gap:.5rem;margin-top:.55rem}.toolrow button{flex:1}.selected{background:#dbeafe!important;border-color:#175cd3!important;color:#124daf!important}.adjust{margin:.7rem 0}.adjust label{display:flex;justify-content:space-between}.adjust input{width:100%;accent-color:#175cd3}.zoom-readout{font-size:.82rem;color:#cbd5e1;min-width:3.3rem;text-align:center}.hint,#status{font-size:.88rem;line-height:1.4;color:#526078}#status{margin:.5rem 0;min-height:1.4em}.snapshots{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}.snapshots img{width:100%;border-radius:7px}.snapshots a{font-size:.85rem;overflow-wrap:anywhere}.setup{position:fixed;z-index:10;inset:0;display:grid;place-items:center;padding:1rem;background:#07101fbb}.card{width:min(440px,100%);padding:1.5rem;border-radius:16px;background:#fff;box-shadow:0 18px 60px #0005}.card h1{margin-top:0;font-size:1.4rem}.card p{color:#526078;line-height:1.5}.card label{display:block;margin:.8rem 0 .3rem;font-weight:650}.card select,.card button{width:100%;margin-top:.65rem}.card button{min-height:46px}@media(max-width:620px){.floatbar{left:10px;right:10px;bottom:max(10px,env(safe-area-inset-bottom));transform:none;justify-content:center;gap:3px;padding:5px}.floatbar button{min-width:38px;padding:.4rem;font-size:.86rem}.floatbar .optional-label{display:none}.panel{top:8px;right:8px;max-height:calc(100dvh - 16px)}}@media(prefers-reduced-motion:reduce){*{transition-duration:.01ms!important}}
+</style>
 </head>
 <body>
 <main class="app" id="app">
-  <nav class="topbar" aria-label="Viewer options">
-    <button id="open-menu" type="button" aria-label="Open camera controls" aria-controls="menu" aria-expanded="false">☰</button>
+  <div class="stage" id="stage" aria-label="Camera preview. Drag to pan when zoomed in; enable annotation to draw.">
+    <video id="video" autoplay muted playsinline hidden></video><canvas id="ink" aria-label="Annotation canvas"></canvas>
+    <div class="placeholder" id="placeholder"><strong>Document Camera</strong><p>Set up your camera to begin.</p></div>
+  </div>
+  <nav class="floatbar" id="floatbar" aria-label="Quick camera controls">
+    <span class="drag-handle" id="bar-grip" title="Drag toolbar to move" aria-label="Drag toolbar to move">⠿</span>
+    <button id="open-menu" type="button" aria-label="Open settings" title="Settings">☰</button>
+    <button id="start" class="primary labelled" type="button" title="Start camera">▶<span class="optional-label"> Start</span></button>
+    <button id="stop" type="button" disabled title="Stop camera">■<span class="optional-label"> Stop</span></button>
+    <button id="freeze" type="button" disabled aria-pressed="false" title="Freeze frame">Ⅱ<span class="optional-label"> Freeze</span></button>
+    <button id="annotate" type="button" disabled aria-pressed="false" title="Turn annotation on or off">✎<span class="optional-label"> Draw</span></button>
+    <button id="snapshot" class="primary" type="button" disabled title="Take snapshot">◎<span class="optional-label"> Snap</span></button>
     <button id="fullscreen" type="button" aria-label="Enter fullscreen" title="Enter fullscreen">⛶</button>
   </nav>
-  <section class="viewer" aria-label="Document camera viewer">
-    <div class="stage" id="stage" aria-label="Camera preview. Drag to pan when zoomed; enable annotation to draw.">
-      <video id="video" autoplay muted playsinline hidden></video>
-      <canvas id="ink" aria-label="Annotation canvas"></canvas>
-      <div class="placeholder" id="placeholder"><strong>Document Camera</strong><p>Set up your camera to begin.</p></div>
-    </div>
-  </section>
-  <div class="backdrop" id="backdrop" hidden></div>
-  <aside class="panel closed" id="menu" aria-label="Camera controls" aria-hidden="true" inert>
-    <div class="heading"><h1>Camera controls</h1><button id="close-menu" type="button" aria-label="Close controls">×</button></div>
-    <div class="actions" aria-label="Camera actions">
-      <button class="primary" id="start" type="button">Start camera</button><button id="stop" type="button" disabled>Stop camera</button>
-      <button id="freeze" type="button" disabled aria-pressed="false">Freeze frame</button><button class="primary" id="snapshot" type="button" disabled>Take snapshot</button>
-      <button id="zoom-out" type="button" disabled>− Zoom out</button><output class="zoom" id="zoom-value">100%</output>
-      <button id="zoom-in" type="button" disabled>+ Zoom in</button><button id="reset-view" type="button" disabled>Reset view</button>
-    </div>
+  <aside class="panel closed" id="menu" aria-label="Camera settings" aria-hidden="true" inert>
+    <div class="panel-head"><span class="panel-grip" id="panel-grip" title="Drag panel to move" aria-label="Drag settings panel to move">⠿</span><h1>Camera settings</h1><button id="close-menu" type="button" aria-label="Close settings">×</button></div>
     <p id="status" role="status" aria-live="polite">Camera access starts when you choose Allow camera access.</p>
-    <details open>
-      <summary>Camera setup</summary>
-      <div class="section-body"><label for="camera">Choose camera</label><select id="camera"><option value="">System default camera</option></select><p class="hint">Connect your document camera before starting. Camera access requires HTTPS and your permission.</p></div>
-    </details>
-    <details>
-      <summary>Annotations</summary>
-      <div class="section-body">
-        <button id="annotate" type="button" aria-pressed="false" disabled>Enable annotation</button>
-        <div class="toolrow"><button id="pen" type="button" class="selected" aria-pressed="true" disabled>Pen</button><button id="eraser" type="button" aria-pressed="false" disabled>Eraser</button></div>
-        <div class="grid"><label for="ink-color">Pen color<input id="ink-color" type="color" value="#ff3030" disabled></label><label for="ink-size">Tool size<select id="ink-size" disabled><option value="2">Fine</option><option value="4" selected>Medium</option><option value="8">Thick</option><option value="12">Extra thick</option></select></label></div>
-        <div class="grid"><button id="undo" type="button" disabled>Undo stroke</button><button id="clear" type="button" disabled>Clear annotations</button></div>
-        <p class="hint">Enable annotation, choose Pen or Eraser, then draw directly on the preview with a mouse, touch, or stylus. Snapshots include annotations.</p>
-      </div>
-    </details>
-    <details>
-      <summary>Image adjustments</summary>
-      <div class="section-body">
-        <div class="adjust"><label for="brightness">Brightness <output id="brightness-out">100%</output></label><input id="brightness" type="range" min="50" max="150" value="100" disabled></div>
-        <div class="adjust"><label for="contrast">Contrast <output id="contrast-out">100%</output></label><input id="contrast" type="range" min="50" max="150" value="100" disabled></div>
-        <button id="reset-adjust" type="button" disabled>Reset image adjustments</button>
-      </div>
-    </details>
-    <details>
-      <summary>Snapshots</summary>
-      <div class="section-body"><p class="hint">Snapshots are downloaded when captured. Video and snapshots stay in this browser; this page does not upload them.</p><div class="snapshots" id="snapshots" aria-live="polite"></div></div>
-    </details>
+    <details open><summary>Camera &amp; view</summary><div class="section"><label for="camera">Choose camera</label><select id="camera"><option value="">System default camera</option></select><p class="hint">Camera access requires HTTPS and your permission.</p><div class="grid"><button id="zoom-out" type="button" disabled>− Zoom out</button><button id="zoom-in" type="button" disabled>+ Zoom in</button></div><div class="grid"><output class="zoom-readout" id="zoom-value">100%</output><button id="reset-view" type="button" disabled>Reset view</button></div></div></details>
+    <details><summary>Annotation tools</summary><div class="section"><div class="toolrow"><button id="pen" type="button" class="selected" aria-pressed="true" disabled>Pen</button><button id="eraser" type="button" aria-pressed="false" disabled>Eraser</button></div><div class="grid"><label for="ink-color">Pen color<input id="ink-color" type="color" value="#ff3030" disabled></label><label for="ink-size">Tool size<select id="ink-size" disabled><option value="2">Fine</option><option value="4" selected>Medium</option><option value="8">Thick</option><option value="12">Extra thick</option></select></label></div><div class="grid"><button id="undo" type="button" disabled>Undo stroke</button><button id="clear" type="button" disabled>Clear annotations</button></div><p class="hint">Choose Pen or Eraser, then draw on the image. Toolbar and settings panel movement is paused for the entire time a stroke is being drawn.</p></div></details>
+    <details><summary>Image adjustments</summary><div class="section"><div class="adjust"><label for="brightness">Brightness <output id="brightness-out">100%</output></label><input id="brightness" type="range" min="50" max="150" value="100" disabled></div><div class="adjust"><label for="contrast">Contrast <output id="contrast-out">100%</output></label><input id="contrast" type="range" min="50" max="150" value="100" disabled></div><button id="reset-adjust" type="button" disabled>Reset adjustments</button></div></details>
+    <details><summary>Snapshots <span id="snapshot-count"></span></summary><div class="section"><p class="hint">Snapshots download to your device and include the visible annotations.</p><div class="snapshots" id="snapshots" aria-live="polite"></div></div></details>
   </aside>
-  <section class="setup" id="setup" role="dialog" aria-modal="true" aria-labelledby="setup-title">
-    <div class="card"><h1 id="setup-title">Set up your document camera</h1><p>Allow camera access, then choose which camera to use. Your camera feed stays in this browser and is not uploaded.</p>
-      <button class="primary" id="allow" type="button">Allow camera access</button>
-      <div id="choose-wrap" hidden><label for="first-camera">Choose a camera</label><select id="first-camera"></select><button class="primary" id="start-selected" type="button">Start selected camera</button></div>
-      <p id="setup-status" role="status" aria-live="polite">Permission is requested only after you click Allow camera access.</p>
-    </div>
-  </section>
-</main>
-<canvas id="capture" hidden></canvas>
+  <section class="setup" id="setup" role="dialog" aria-modal="true" aria-labelledby="setup-title"><div class="card"><h1 id="setup-title">Set up your document camera</h1><p>Allow camera access, then choose which camera to use. Your camera feed stays in this browser and is not uploaded.</p><button class="primary" id="allow" type="button">Allow camera access</button><div id="choose-wrap" hidden><label for="first-camera">Choose a camera</label><select id="first-camera"></select><button class="primary" id="start-selected" type="button">Start selected camera</button></div><p id="setup-status" role="status" aria-live="polite">Permission is requested only after you click Allow camera access.</p></div></section>
+</main><canvas id="capture" hidden></canvas>
 <script>
 (() => {
   const $ = id => document.getElementById(id);
-  const app = $('app'), video = $('video'), stage = $('stage'), ink = $('ink'), ctx = ink.getContext('2d');
-  const placeholder = $('placeholder'), camera = $('camera'), firstCamera = $('first-camera'), setup = $('setup'), chooseWrap = $('choose-wrap');
-  const allow = $('allow'), setupStatus = $('setup-status'), status = $('status'), start = $('start'), stop = $('stop');
-  const freeze = $('freeze'), snapshot = $('snapshot'), annotate = $('annotate'), pen = $('pen'), eraser = $('eraser');
-  const color = $('ink-color'), size = $('ink-size'), undo = $('undo'), clear = $('clear'), zoomIn = $('zoom-in'), zoomOut = $('zoom-out');
-  const zoomValue = $('zoom-value'), resetView = $('reset-view'), brightness = $('brightness'), contrast = $('contrast');
-  const brightnessOut = $('brightness-out'), contrastOut = $('contrast-out'), resetAdjust = $('reset-adjust');
-  const capture = $('capture'), snapshots = $('snapshots'), menu = $('menu'), openMenu = $('open-menu'), backdrop = $('backdrop');
-  let stream = null, zoom = 1, panX = 0, panY = 0, pan = null, drawing = null, annotationOn = false, tool = 'pen';
-  const strokes = [], zoomStep = .25;
+  const app=$('app'),stage=$('stage'),video=$('video'),ink=$('ink'),ctx=ink.getContext('2d'),placeholder=$('placeholder');
+  const camera=$('camera'),firstCamera=$('first-camera'),setup=$('setup'),chooseWrap=$('choose-wrap'),allow=$('allow'),setupStatus=$('setup-status'),status=$('status');
+  const start=$('start'),stop=$('stop'),freeze=$('freeze'),snapshot=$('snapshot'),annotate=$('annotate'),pen=$('pen'),eraser=$('eraser');
+  const color=$('ink-color'),size=$('ink-size'),undo=$('undo'),clear=$('clear'),zoomIn=$('zoom-in'),zoomOut=$('zoom-out'),zoomValue=$('zoom-value'),resetView=$('reset-view');
+  const brightness=$('brightness'),contrast=$('contrast'),brightnessOut=$('brightness-out'),contrastOut=$('contrast-out'),resetAdjust=$('reset-adjust');
+  const capture=$('capture'),snapshots=$('snapshots'),menu=$('menu'),floatbar=$('floatbar'),backdrop=null;
+  let stream=null,zoom=1,panX=0,panY=0,pan=null,drawing=null,annotationOn=false,tool='pen',moveDrag=null,snapshotTotal=0;
+  const strokes=[],zoomStep=.25;
 
-  function say(message) { status.textContent = message; }
-  function populate(select, devices) {
-    const old = select.value;
-    select.replaceChildren(new Option('System default camera', ''));
-    devices.filter(device => device.kind === 'videoinput').forEach((device, i) => select.add(new Option(device.label || `Camera ${i + 1}`, device.deviceId)));
-    if ([...select.options].some(option => option.value === old)) select.value = old;
-  }
-  async function listCameras() {
-    if (!navigator.mediaDevices?.enumerateDevices) return;
-    try { const devices = await navigator.mediaDevices.enumerateDevices(); populate(camera, devices); if (!chooseWrap.hidden) populate(firstCamera, devices); } catch { /* Camera list may be unavailable before permission. */ }
-  }
-  function redraw() {
-    const rect = stage.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, rect.width, rect.height);
-    for (const stroke of strokes) {
-      if (!stroke.points.length) continue;
-      ctx.save();
-      ctx.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over';
-      ctx.strokeStyle = stroke.color; ctx.lineWidth = stroke.size; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      ctx.beginPath(); ctx.moveTo(stroke.points[0].x * rect.width, stroke.points[0].y * rect.height);
-      if (stroke.points.length === 1) ctx.lineTo(stroke.points[0].x * rect.width + .01, stroke.points[0].y * rect.height + .01);
-      else for (let i = 1; i < stroke.points.length; i++) ctx.lineTo(stroke.points[i].x * rect.width, stroke.points[i].y * rect.height);
-      ctx.stroke(); ctx.restore();
-    }
-  }
-  function resizeInk() {
-    const rect = stage.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
-    ink.width = Math.max(1, Math.round(rect.width * dpr)); ink.height = Math.max(1, Math.round(rect.height * dpr));
-    ink.style.width = `${rect.width}px`; ink.style.height = `${rect.height}px`; redraw();
-  }
-  function update() {
-    video.style.transform = `translate(${panX}px,${panY}px) scale(${zoom})`;
-    video.style.filter = `brightness(${brightness.value}%) contrast(${contrast.value}%)`;
-    brightnessOut.value = `${brightness.value}%`; contrastOut.value = `${contrast.value}%`;
-    brightnessOut.textContent = `${brightness.value}%`; contrastOut.textContent = `${contrast.value}%`;
-    zoomValue.value = `${Math.round(zoom * 100)}%`; zoomValue.textContent = `${Math.round(zoom * 100)}%`;
-    zoomIn.disabled = !stream || zoom >= 4; zoomOut.disabled = !stream || zoom <= 1;
-    resetView.disabled = !stream || (zoom === 1 && panX === 0 && panY === 0);
-    annotate.disabled = !stream; color.disabled = !stream; size.disabled = !stream; pen.disabled = !stream; eraser.disabled = !stream;
-    undo.disabled = !stream || strokes.length === 0; clear.disabled = !stream || strokes.length === 0;
-    annotate.textContent = annotationOn ? 'Finish annotation' : 'Enable annotation';
-    annotate.setAttribute('aria-pressed', String(annotationOn)); ink.classList.toggle('drawing', annotationOn && Boolean(stream));
-    pen.classList.toggle('selected', tool === 'pen'); eraser.classList.toggle('selected', tool === 'eraser');
-    pen.setAttribute('aria-pressed', String(tool === 'pen')); eraser.setAttribute('aria-pressed', String(tool === 'eraser'));
-    stage.style.cursor = annotationOn ? 'crosshair' : (stream && zoom > 1 ? (pan ? 'grabbing' : 'grab') : 'default');
-    resetAdjust.disabled = !stream || (brightness.value === '100' && contrast.value === '100');
-  }
-  function setZoom(value) { zoom = Math.max(1, Math.min(4, value)); if (zoom === 1) panX = panY = 0; update(); }
-  function setMenuOpen(open) {
-    menu.classList.toggle('closed', !open); menu.inert = !open; menu.setAttribute('aria-hidden', String(!open));
-    openMenu.setAttribute('aria-expanded', String(open)); backdrop.hidden = !open;
-    if (open) $('close-menu').focus(); else openMenu.focus();
-  }
-  async function startCamera(deviceId = camera.value) {
-    if (!navigator.mediaDevices?.getUserMedia) { say('Camera access requires a supported browser and HTTPS.'); return false; }
-    start.disabled = true; say('Waiting for camera permission…');
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'environment' } });
-      video.srcObject = stream; video.hidden = false; placeholder.hidden = true; await video.play();
-      stop.disabled = false; snapshot.disabled = false; freeze.disabled = false; brightness.disabled = false; contrast.disabled = false;
-      await listCameras(); if (deviceId) camera.value = deviceId;
-      say('Camera is on. Enable annotation and draw directly on the preview.'); update(); resizeInk(); return true;
-    } catch (error) {
-      if (stream) stream.getTracks().forEach(track => track.stop()); stream = null;
-      video.srcObject = null; video.hidden = true; placeholder.hidden = false; start.disabled = false;
-      stop.disabled = snapshot.disabled = freeze.disabled = true; brightness.disabled = contrast.disabled = true;
-      const messages = { NotAllowedError: 'Camera permission denied. Allow access in Chrome site settings and try again.', NotFoundError: 'No camera found. Connect a document camera and try again.', NotReadableError: 'Camera is in use by another app. Close it and retry.', OverconstrainedError: 'That camera is unavailable. Select another camera.' };
-      say(messages[error.name] || `Could not start camera: ${error.message || 'unknown error'}.`); update(); return false;
-    }
-  }
-  async function requestPermission() {
-    if (!navigator.mediaDevices?.getUserMedia) { setupStatus.textContent = 'Camera access requires a supported browser and a secure HTTPS page.'; return; }
-    allow.disabled = true; setupStatus.textContent = 'Waiting for camera permission…'; let temporaryStream;
-    try {
-      temporaryStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
-      const devices = await navigator.mediaDevices.enumerateDevices(); populate(firstCamera, devices); populate(camera, devices);
-      chooseWrap.hidden = false; allow.hidden = true; setupStatus.textContent = 'Access granted. Choose your document camera.'; firstCamera.focus();
-    } catch (error) {
-      setupStatus.textContent = error.name === 'NotAllowedError' ? 'Permission denied. Allow camera access in Chrome site settings, then retry.' : error.name === 'NotFoundError' ? 'No camera found. Connect a document camera and retry.' : `Could not access a camera: ${error.message || 'unknown error'}.`;
-      allow.disabled = false;
-    } finally { if (temporaryStream) temporaryStream.getTracks().forEach(track => track.stop()); }
-  }
-  function stopCamera(message = 'Camera stopped.') {
-    if (stream) stream.getTracks().forEach(track => track.stop()); stream = null;
-    video.pause(); video.srcObject = null; video.hidden = true; placeholder.hidden = false;
-    start.disabled = false; stop.disabled = snapshot.disabled = freeze.disabled = true;
-    freeze.textContent = 'Freeze frame'; freeze.setAttribute('aria-pressed', 'false'); annotationOn = false;
-    brightness.disabled = contrast.disabled = true; zoom = 1; panX = panY = 0; update(); say(message);
-  }
-  function takeSnapshot() {
-    if (!stream || !video.videoWidth) return;
-    const rect = stage.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
-    const width = Math.max(1, Math.round(rect.width * dpr)), height = Math.max(1, Math.round(rect.height * dpr));
-    capture.width = width; capture.height = height;
-    const context = capture.getContext('2d'); context.fillStyle = '#101827'; context.fillRect(0, 0, width, height);
-    const fit = Math.min(rect.width / video.videoWidth, rect.height / video.videoHeight), drawWidth = video.videoWidth * fit, drawHeight = video.videoHeight * fit;
-    context.save(); context.scale(dpr, dpr); context.translate(rect.width / 2 + panX, rect.height / 2 + panY); context.scale(zoom, zoom);
-    context.filter = `brightness(${brightness.value}%) contrast(${contrast.value}%)`;
-    context.drawImage(video, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight); context.restore();
-    context.filter = 'none'; context.drawImage(ink, 0, 0, width, height);
-    capture.toBlob(blob => {
-      if (!blob) { say('Could not create snapshot.'); return; }
-      const url = URL.createObjectURL(blob), filename = `document-camera-${new Date().toISOString().replace(/[:.]/g, '-')}.png`;
-      const download = document.createElement('a'); download.href = url; download.download = filename; download.click();
-      const item = document.createElement('div'), image = document.createElement('img'), link = document.createElement('a');
-      image.src = url; image.alt = 'Camera snapshot'; link.href = url; link.download = filename; link.textContent = 'Download snapshot';
-      item.append(image, link); snapshots.prepend(item); say('Snapshot downloaded.');
-    }, 'image/png');
-  }
-  function eventPoint(event) { const rect = stage.getBoundingClientRect(); return { x: (event.clientX - rect.left) / rect.width, y: (event.clientY - rect.top) / rect.height }; }
-
-  $('allow').addEventListener('click', requestPermission);
-  $('start-selected').addEventListener('click', async () => { const started = await startCamera(firstCamera.value); if (started) setup.hidden = true; });
-  openMenu.addEventListener('click', () => setMenuOpen(true)); $('close-menu').addEventListener('click', () => setMenuOpen(false)); backdrop.addEventListener('click', () => setMenuOpen(false));
-  document.addEventListener('keydown', event => { if (event.key === 'Escape' && !menu.classList.contains('closed')) setMenuOpen(false); });
-  $('fullscreen').addEventListener('click', async () => { try { if (document.fullscreenElement === app) await document.exitFullscreen(); else await app.requestFullscreen(); } catch { say('Fullscreen is not supported or could not be opened.'); } });
-  document.addEventListener('fullscreenchange', () => { const button = $('fullscreen'), active = document.fullscreenElement === app; button.textContent = active ? '×' : '⛶'; button.setAttribute('aria-label', active ? 'Exit fullscreen' : 'Enter fullscreen'); resizeInk(); });
-  start.addEventListener('click', async () => { if (await startCamera()) setup.hidden = true; }); stop.addEventListener('click', () => stopCamera());
-  freeze.addEventListener('click', async () => { if (!stream) return; if (video.paused) { try { await video.play(); freeze.textContent = 'Freeze frame'; freeze.setAttribute('aria-pressed', 'false'); say('Live camera resumed.'); } catch { say('Could not resume live camera.'); } } else { video.pause(); freeze.textContent = 'Resume live'; freeze.setAttribute('aria-pressed', 'true'); say('Frame frozen.'); } });
-  snapshot.addEventListener('click', takeSnapshot); zoomIn.addEventListener('click', () => setZoom(zoom + zoomStep)); zoomOut.addEventListener('click', () => setZoom(zoom - zoomStep));
-  $('reset-view').addEventListener('click', () => { zoom = 1; panX = panY = 0; update(); });
-  brightness.addEventListener('input', update); contrast.addEventListener('input', update); $('reset-adjust').addEventListener('click', () => { brightness.value = contrast.value = '100'; update(); });
-  annotate.addEventListener('click', () => { annotationOn = !annotationOn; update(); say(annotationOn ? 'Annotation mode on. Draw on the preview.' : 'Annotation mode off.'); });
-  pen.addEventListener('click', () => { tool = 'pen'; update(); }); eraser.addEventListener('click', () => { tool = 'eraser'; update(); });
-  ink.addEventListener('pointerdown', event => {
-    if (!annotationOn || !stream) return;
-    event.preventDefault(); ink.setPointerCapture(event.pointerId);
-    drawing = { tool, color: color.value, size: Number(size.value), points: [eventPoint(event)] };
-    strokes.push(drawing); redraw(); update();
-  });
-  ink.addEventListener('pointermove', event => { if (!drawing) return; drawing.points.push(eventPoint(event)); redraw(); });
-  function endDrawing() { drawing = null; update(); }
-  ink.addEventListener('pointerup', endDrawing); ink.addEventListener('pointercancel', endDrawing); ink.addEventListener('lostpointercapture', endDrawing);
-  $('undo').addEventListener('click', () => { strokes.pop(); redraw(); update(); }); $('clear').addEventListener('click', () => { strokes.length = 0; redraw(); update(); });
-  camera.addEventListener('change', async () => { if (stream) { stopCamera('Switching camera…'); if (await startCamera(camera.value)) setup.hidden = true; } });
-  stage.addEventListener('pointerdown', event => { if (!stream || annotationOn || zoom <= 1) return; pan = { x: event.clientX, y: event.clientY, panX, panY }; stage.setPointerCapture(event.pointerId); update(); });
-  stage.addEventListener('pointermove', event => { if (!pan) return; panX = pan.panX + event.clientX - pan.x; panY = pan.panY + event.clientY - pan.y; update(); });
-  function endPan() { pan = null; update(); }
-  stage.addEventListener('pointerup', endPan); stage.addEventListener('pointercancel', endPan);
-  stage.addEventListener('wheel', event => { if (stream && !annotationOn) { event.preventDefault(); setZoom(zoom + (event.deltaY < 0 ? zoomStep : -zoomStep)); } }, { passive: false });
-  window.addEventListener('resize', resizeInk);
-  if ('ResizeObserver' in window) new ResizeObserver(resizeInk).observe(stage);
-  video.addEventListener('loadedmetadata', listCameras);
-  window.addEventListener('beforeunload', () => { if (stream) stream.getTracks().forEach(track => track.stop()); snapshots.querySelectorAll('img').forEach(image => URL.revokeObjectURL(image.src)); });
-  listCameras(); resizeInk(); update();
+  function say(message){status.textContent=message}
+  function populate(select,devices){const old=select.value;select.replaceChildren(new Option('System default camera',''));devices.filter(d=>d.kind==='videoinput').forEach((d,i)=>select.add(new Option(d.label||`Camera ${i+1}`,d.deviceId)));if([...select.options].some(o=>o.value===old))select.value=old}
+  async function listCameras(){if(!navigator.mediaDevices?.enumerateDevices)return;try{const ds=await navigator.mediaDevices.enumerateDevices();populate(camera,ds);if(!chooseWrap.hidden)populate(firstCamera,ds)}catch{}}
+  function redraw(){const r=stage.getBoundingClientRect(),d=window.devicePixelRatio||1;ctx.setTransform(d,0,0,d,0,0);ctx.clearRect(0,0,r.width,r.height);for(const s of strokes){if(!s.points.length)continue;ctx.save();ctx.globalCompositeOperation=s.tool==='eraser'?'destination-out':'source-over';ctx.strokeStyle=s.color;ctx.lineWidth=s.size;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(s.points[0].x*r.width,s.points[0].y*r.height);if(s.points.length===1)ctx.lineTo(s.points[0].x*r.width+.01,s.points[0].y*r.height+.01);else for(let i=1;i<s.points.length;i++)ctx.lineTo(s.points[i].x*r.width,s.points[i].y*r.height);ctx.stroke();ctx.restore()}}
+  function resizeInk(){const r=stage.getBoundingClientRect(),d=window.devicePixelRatio||1;ink.width=Math.max(1,Math.round(r.width*d));ink.height=Math.max(1,Math.round(r.height*d));ink.style.width=`${r.width}px`;ink.style.height=`${r.height}px`;redraw()}
+  function update(){video.style.transform=`translate(${panX}px,${panY}px) scale(${zoom})`;video.style.filter=`brightness(${brightness.value}%) contrast(${contrast.value}%)`;brightnessOut.value=`${brightness.value}%`;contrastOut.value=`${contrast.value}%`;brightnessOut.textContent=`${brightness.value}%`;contrastOut.textContent=`${contrast.value}%`;zoomValue.value=`${Math.round(zoom*100)}%`;zoomValue.textContent=`${Math.round(zoom*100)}%`;zoomIn.disabled=!stream||zoom>=4;zoomOut.disabled=!stream||zoom<=1;resetView.disabled=!stream||(zoom===1&&!panX&&!panY);annotate.disabled=!stream;color.disabled=!stream;size.disabled=!stream;pen.disabled=!stream;eraser.disabled=!stream;undo.disabled=!stream||!strokes.length;clear.disabled=!stream||!strokes.length;annotate.textContent=annotationOn?'✓ Draw on':'✎ Draw';annotate.setAttribute('aria-pressed',String(annotationOn));ink.classList.toggle('drawing',annotationOn&&!!stream);pen.classList.toggle('selected',tool==='pen');eraser.classList.toggle('selected',tool==='eraser');pen.setAttribute('aria-pressed',String(tool==='pen'));eraser.setAttribute('aria-pressed',String(tool==='eraser'));stage.style.cursor=annotationOn?'crosshair':(stream&&zoom>1?(pan?'grabbing':'grab'):'default');resetAdjust.disabled=!stream||(brightness.value==='100'&&contrast.value==='100');$('bar-grip').setAttribute('aria-disabled',String(Boolean(drawing)));$('panel-grip').setAttribute('aria-disabled',String(Boolean(drawing)))}
+  function setZoom(v){zoom=Math.max(1,Math.min(4,v));if(zoom===1)panX=panY=0;update()}
+  function toggleMenu(open){menu.classList.toggle('closed',!open);menu.inert=!open;menu.setAttribute('aria-hidden',String(!open));$('open-menu').setAttribute('aria-expanded',String(open));if(open)$('close-menu').focus();else $('open-menu').focus()}
+  function clampPosition(el,left,top){const margin=8,r=el.getBoundingClientRect(),w=r.width,h=r.height;return {left:Math.max(margin,Math.min(window.innerWidth-w,left)),top:Math.max(margin,Math.min(window.innerHeight-h,top))}}
+  function startMove(event,element,handle,key){if(event.button!==undefined&&event.button!==0)return;if(drawing)return;event.preventDefault();event.stopPropagation();const rect=element.getBoundingClientRect();moveDrag={element,handle,key,pointerId:event.pointerId,dx:event.clientX-rect.left,dy:event.clientY-rect.top};handle.setPointerCapture(event.pointerId)}
+  function moveElement(event){if(!moveDrag||moveDrag.pointerId!==event.pointerId)return;const pos=clampPosition(moveDrag.element,event.clientX-moveDrag.dx,event.clientY-moveDrag.dy);moveDrag.element.style.left=`${pos.left}px`;moveDrag.element.style.top=`${pos.top}px`;moveDrag.element.style.right='auto';moveDrag.element.style.bottom='auto';moveDrag.element.style.transform='none';moveDrag.element.classList.add('moved');try{localStorage.setItem(moveDrag.key,JSON.stringify(pos))}catch{}}
+  function endMove(event){if(moveDrag&&moveDrag.pointerId===event.pointerId){moveDrag=null}}
+  function restorePosition(element,key,defaultPosition){try{const saved=JSON.parse(localStorage.getItem(key));if(saved&&Number.isFinite(saved.left)&&Number.isFinite(saved.top)){const pos=clampPosition(element,saved.left,saved.top);element.style.left=`${pos.left}px`;element.style.top=`${pos.top}px`;element.style.right='auto';element.style.bottom='auto';element.style.transform='none';element.classList.add('moved');return}}catch{}if(defaultPosition==='bar'){element.style.left='50%';element.style.bottom='max(16px, env(safe-area-inset-bottom))';element.style.top='auto';element.style.right='auto';element.style.transform='translateX(-50%)'}}
+  async function startCamera(id=camera.value){if(!navigator.mediaDevices?.getUserMedia){say('Camera access requires a supported browser and HTTPS.');return false}start.disabled=true;say('Waiting for camera permission…');try{stream=await navigator.mediaDevices.getUserMedia({audio:false,video:id?{deviceId:{exact:id}}:{facingMode:'environment'}});video.srcObject=stream;video.hidden=false;placeholder.hidden=true;await video.play();stop.disabled=false;snapshot.disabled=false;freeze.disabled=false;brightness.disabled=contrast.disabled=false;await listCameras();if(id)camera.value=id;say('Camera ready. Use the toolbar for common actions; open settings for more controls.');update();resizeInk();return true}catch(e){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;video.hidden=true;placeholder.hidden=false;start.disabled=false;stop.disabled=snapshot.disabled=freeze.disabled=true;brightness.disabled=contrast.disabled=true;const m={NotAllowedError:'Camera permission denied. Allow access in Chrome site settings and try again.',NotFoundError:'No camera found. Connect a document camera and try again.',NotReadableError:'Camera is in use by another app. Close it and retry.',OverconstrainedError:'That camera is unavailable. Select another camera.'};say(m[e.name]||`Could not start camera: ${e.message||'unknown error'}.`);update();return false}}
+  async function requestPermission(){if(!navigator.mediaDevices?.getUserMedia){setupStatus.textContent='Camera access requires a supported browser and HTTPS.';return}allow.disabled=true;setupStatus.textContent='Waiting for camera permission…';let temp;try{temp=await navigator.mediaDevices.getUserMedia({audio:false,video:true});const ds=await navigator.mediaDevices.enumerateDevices();populate(firstCamera,ds);populate(camera,ds);chooseWrap.hidden=false;allow.hidden=true;setupStatus.textContent='Access granted. Choose your camera.';firstCamera.focus()}catch(e){setupStatus.textContent=e.name==='NotAllowedError'?'Permission denied. Allow camera access in Chrome site settings, then retry.':e.name==='NotFoundError'?'No camera found. Connect a camera and retry.':`Could not access a camera: ${e.message||'unknown error'}.`;allow.disabled=false}finally{if(temp)temp.getTracks().forEach(t=>t.stop())}}
+  function stopCamera(message='Camera stopped.'){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;video.pause();video.srcObject=null;video.hidden=true;placeholder.hidden=false;start.disabled=false;stop.disabled=snapshot.disabled=freeze.disabled=true;freeze.textContent='Ⅱ Freeze';freeze.setAttribute('aria-pressed','false');annotationOn=false;brightness.disabled=contrast.disabled=true;zoom=1;panX=panY=0;update();say(message)}
+  function takeSnapshot(){if(!stream||!video.videoWidth)return;const r=stage.getBoundingClientRect(),d=window.devicePixelRatio||1,w=Math.max(1,Math.round(r.width*d)),h=Math.max(1,Math.round(r.height*d));capture.width=w;capture.height=h;const c=capture.getContext('2d');c.fillStyle='#101827';c.fillRect(0,0,w,h);const fit=Math.min(r.width/video.videoWidth,r.height/video.videoHeight),dw=video.videoWidth*fit,dh=video.videoHeight*fit;c.save();c.scale(d,d);c.translate(r.width/2+panX,r.height/2+panY);c.scale(zoom,zoom);c.filter=`brightness(${brightness.value}%) contrast(${contrast.value}%)`;c.drawImage(video,-dw/2,-dh/2,dw,dh);c.restore();c.filter='none';c.drawImage(ink,0,0,w,h);capture.toBlob(blob=>{if(!blob){say('Could not create snapshot.');return}const url=URL.createObjectURL(blob),name=`document-camera-${new Date().toISOString().replace(/[:.]/g,'-')}.png`,a=document.createElement('a');a.href=url;a.download=name;a.click();const box=document.createElement('div'),img=document.createElement('img'),link=document.createElement('a');img.src=url;img.alt='Camera snapshot';link.href=url;link.download=name;link.textContent='Download snapshot';box.append(img,link);snapshots.prepend(box);snapshotTotal++;$('snapshot-count').textContent=`(${snapshotTotal})`;say('Snapshot downloaded.')},'image/png')}
+  function point(event){const r=stage.getBoundingClientRect();return{x:(event.clientX-r.left)/r.width,y:(event.clientY-r.top)/r.height}}
+  $('allow').addEventListener('click',requestPermission);$('start-selected').addEventListener('click',async()=>{if(await startCamera(firstCamera.value))setup.hidden=true});
+  $('open-menu').addEventListener('click',()=>toggleMenu(true));$('close-menu').addEventListener('click',()=>toggleMenu(false));document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!menu.classList.contains('closed'))toggleMenu(false)});
+  $('fullscreen').addEventListener('click',async()=>{try{if(document.fullscreenElement===app)await document.exitFullscreen();else await app.requestFullscreen()}catch{say('Fullscreen is not supported or could not be opened.')}});document.addEventListener('fullscreenchange',()=>{$('fullscreen').textContent=document.fullscreenElement===app?'×':'⛶';$('fullscreen').setAttribute('aria-label',document.fullscreenElement===app?'Exit fullscreen':'Enter fullscreen')});
+  start.addEventListener('click',async()=>{if(await startCamera())setup.hidden=true});stop.addEventListener('click',()=>stopCamera());freeze.addEventListener('click',async()=>{if(!stream)return;if(video.paused){try{await video.play();freeze.innerHTML='Ⅱ<span class="optional-label"> Freeze</span>';freeze.setAttribute('aria-pressed','false');say('Live camera resumed.')}catch{say('Could not resume live camera.')}}else{video.pause();freeze.innerHTML='▶<span class="optional-label"> Resume</span>';freeze.setAttribute('aria-pressed','true');say('Frame frozen.')}});
+  snapshot.addEventListener('click',takeSnapshot);annotate.addEventListener('click',()=>{annotationOn=!annotationOn;update();say(annotationOn?'Annotation on—draw on the image.':'Annotation off.')});zoomIn.addEventListener('click',()=>setZoom(zoom+zoomStep));zoomOut.addEventListener('click',()=>setZoom(zoom-zoomStep));$('reset-view').addEventListener('click',()=>{zoom=1;panX=panY=0;update()});
+  brightness.addEventListener('input',update);contrast.addEventListener('input',update);$('reset-adjust').addEventListener('click',()=>{brightness.value=contrast.value='100';update()});pen.addEventListener('click',()=>{tool='pen';update()});eraser.addEventListener('click',()=>{tool='eraser';update()});
+  ink.addEventListener('pointerdown',e=>{if(!annotationOn||!stream)return;e.preventDefault();ink.setPointerCapture(e.pointerId);drawing={tool,color:color.value,size:Number(size.value),points:[point(e)]};strokes.push(drawing);redraw();update()});ink.addEventListener('pointermove',e=>{if(drawing){drawing.points.push(point(e));redraw()}});function endDrawing(){if(!drawing)return;drawing=null;update()}ink.addEventListener('pointerup',endDrawing);ink.addEventListener('pointercancel',endDrawing);ink.addEventListener('lostpointercapture',endDrawing);
+  undo.addEventListener('click',()=>{strokes.pop();redraw();update()});clear.addEventListener('click',()=>{strokes.length=0;redraw();update()});camera.addEventListener('change',async()=>{if(stream){stopCamera('Switching camera…');if(await startCamera(camera.value))setup.hidden=true}});
+  stage.addEventListener('pointerdown',e=>{if(!stream||annotationOn||zoom<=1)return;pan={x:e.clientX,y:e.clientY,px:panX,py:panY};stage.setPointerCapture(e.pointerId);update()});stage.addEventListener('pointermove',e=>{if(pan){panX=pan.px+e.clientX-pan.x;panY=pan.py+e.clientY-pan.y;update()}});function endPan(){pan=null;update()}stage.addEventListener('pointerup',endPan);stage.addEventListener('pointercancel',endPan);stage.addEventListener('wheel',e=>{if(stream&&!annotationOn){e.preventDefault();setZoom(zoom+(e.deltaY<0?zoomStep:-zoomStep))}},{passive:false});
+  const barGrip=$('bar-grip'),panelGrip=$('panel-grip');barGrip.addEventListener('pointerdown',e=>startMove(e,floatbar,barGrip,'doccam-toolbar-position'));panelGrip.addEventListener('pointerdown',e=>{if(menu.classList.contains('closed'))return;startMove(e,menu,panelGrip,'doccam-panel-position')});document.addEventListener('pointermove',moveElement);document.addEventListener('pointerup',endMove);document.addEventListener('pointercancel',endMove);
+  window.addEventListener('resize',()=>{resizeInk();for(const [el,key] of [[floatbar,'doccam-toolbar-position'],[menu,'doccam-panel-position']]){try{const p=JSON.parse(localStorage.getItem(key));if(p){const q=clampPosition(el,p.left,p.top);el.style.left=q.left+'px';el.style.top=q.top+'px'}}catch{}}});if('ResizeObserver'in window)new ResizeObserver(resizeInk).observe(stage);video.addEventListener('loadedmetadata',listCameras);window.addEventListener('beforeunload',()=>{if(stream)stream.getTracks().forEach(t=>t.stop());snapshots.querySelectorAll('img').forEach(i=>URL.revokeObjectURL(i.src))});
+  listCameras();resizeInk();update();restorePosition(floatbar,'doccam-toolbar-position','bar');restorePosition(menu,'doccam-panel-position');
 })();
 </script>
 </body>
