@@ -6,87 +6,94 @@
     <meta name="theme-color" content="#10213a" />
     <title>Document Camera</title>
     <style>
-      :root { color-scheme: light; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #172033; background: #edf2f8; }
+      :root { color-scheme: light; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #172033; background: #101827; }
       * { box-sizing: border-box; }
-      body { margin: 0; min-height: 100vh; }
-      .app { max-width: 1200px; margin: 0 auto; padding: 1.25rem; }
-      header { margin-bottom: 1rem; }
-      h1 { margin: 0; font-size: clamp(1.45rem, 3vw, 2rem); }
-      .layout { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 1rem; align-items: start; }
-      .viewer, .panel { background: white; border-radius: 14px; box-shadow: 0 8px 26px #162b4814; }
-      .viewer { overflow: hidden; }
-      .stage { position: relative; display: grid; place-items: center; width: 100%; aspect-ratio: 16 / 9; min-height: 260px; overflow: hidden; background: #101827; touch-action: none; user-select: none; }
-      video { display: block; width: 100%; height: 100%; object-fit: contain; transform-origin: center; }
-      .placeholder { position: absolute; inset: 0; display: grid; place-content: center; gap: .5rem; padding: 1rem; color: white; text-align: center; }
-      .placeholder[hidden] { display: none; }
-      .placeholder p { margin: 0; color: #d3dceb; }
-      .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem; padding: .8rem; border-top: 1px solid #e6ebf2; }
+      body { margin: 0; min-height: 100vh; min-height: 100dvh; }
       button, select, input { font: inherit; }
       button, select { min-height: 42px; border: 1px solid #cbd5e1; border-radius: 8px; background: white; color: #172033; padding: .55rem .8rem; }
       button { cursor: pointer; font-weight: 600; }
       button:hover:not(:disabled) { background: #f0f5ff; border-color: #8ba9dc; }
-      button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid #78a7ff; outline-offset: 2px; }
+      button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid #78a7ff; outline-offset: 2px; }
       button.primary { background: #175cd3; border-color: #175cd3; color: white; }
       button.primary:hover:not(:disabled) { background: #124daf; }
       button:disabled, select:disabled { cursor: not-allowed; opacity: .5; }
-      .zoom-readout { min-width: 4.5rem; text-align: center; font-variant-numeric: tabular-nums; }
-      .panel { padding: 1rem; }
-      .panel h2 { margin: 0 0 .75rem; font-size: 1.1rem; }
+      [hidden] { display: none !important; }
+      .app { position: relative; display: flex; flex-direction: column; width: 100%; height: 100vh; height: 100dvh; overflow: hidden; background: #101827; }
+      .topbar { position: absolute; z-index: 4; top: max(.75rem, env(safe-area-inset-top)); left: max(.75rem, env(safe-area-inset-left)); right: max(.75rem, env(safe-area-inset-right)); display: flex; justify-content: space-between; pointer-events: none; }
+      .topbar button { pointer-events: auto; min-width: 46px; min-height: 46px; color: white; background: #111827dd; border-color: #ffffff55; box-shadow: 0 2px 12px #0005; }
+      .topbar button:hover { color: #172033; background: white; }
+      .viewer { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+      .stage { position: relative; flex: 1; min-height: 0; display: grid; place-items: center; overflow: hidden; background: #101827; touch-action: none; user-select: none; }
+      video { display: block; width: 100%; height: 100%; object-fit: contain; transform-origin: center; }
+      .placeholder { position: absolute; inset: 0; display: grid; place-content: center; gap: .5rem; padding: 1rem; color: white; text-align: center; }
+      .placeholder p { margin: 0; color: #d3dceb; }
+      .menu-backdrop { position: fixed; z-index: 5; inset: 0; background: #07101f88; }
+      .panel { position: fixed; z-index: 6; top: 0; right: 0; bottom: 0; width: min(390px, calc(100vw - 3.5rem)); overflow-y: auto; padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom)); background: #fff; box-shadow: -8px 0 30px #0004; transform: translateX(0); transition: transform .2s ease; }
+      .panel.closed { transform: translateX(105%); visibility: hidden; }
+      .panel h1 { margin: 0; font-size: 1.25rem; }
+      .panel h2 { margin: 1.1rem 0 .65rem; font-size: 1.05rem; }
       .panel label { display: block; margin: .85rem 0 .35rem; font-weight: 650; }
       .panel select { width: 100%; }
+      .menu-heading { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding-bottom: .75rem; border-bottom: 1px solid #e6ebf2; }
+      .menu-heading button { min-width: 42px; padding: .45rem; font-size: 1.25rem; }
+      .control-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem; margin-top: .8rem; }
+      .control-grid button { width: 100%; }
+      .zoom-readout { display: grid; place-items: center; border: 1px solid #e1e7ef; border-radius: 8px; font-variant-numeric: tabular-nums; }
       .adjustment { margin: .85rem 0; }
       .adjustment label { display: flex; justify-content: space-between; gap: .5rem; margin: 0 0 .3rem; }
       .adjustment input { display: block; width: 100%; accent-color: #175cd3; }
       .hint, #status { color: #526078; font-size: .92rem; }
-      #status { min-height: 2.8em; margin: .75rem 0 0; }
+      #status { min-height: 2.8em; margin: .75rem 0; }
       .snapshots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; margin-top: .75rem; }
       .snapshots img { display: block; width: 100%; border-radius: 7px; background: #e7edf5; }
       .snapshot-link { display: block; color: #175cd3; font-size: .85rem; overflow-wrap: anywhere; }
       .footnote { margin: 1rem 0 0; color: #526078; font-size: .85rem; }
-      @media (max-width: 760px) { .app { padding: .8rem; } .layout { grid-template-columns: 1fr; } .stage { min-height: 220px; } }
-      @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } }
+      @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; } }
     </style>
   </head>
   <body>
-    <main class="app">
-      <header><h1>Document Camera</h1></header>
-      <div class="layout">
-        <section class="viewer" aria-label="Document camera viewer">
-          <div class="stage" id="stage" aria-label="Camera preview. When zoomed in, drag to pan the image.">
-            <video id="video" autoplay muted playsinline hidden></video>
-            <div class="placeholder" id="placeholder"><strong>Camera preview</strong><p>Choose a camera and select Start camera to begin.</p></div>
-          </div>
-          <div class="toolbar" aria-label="Camera controls">
-            <button type="button" class="primary" id="start">Start camera</button>
-            <button type="button" id="stop" disabled>Stop</button>
-            <button type="button" id="freeze" disabled aria-pressed="false">Freeze frame</button>
-            <span aria-hidden="true">|</span>
-            <button type="button" id="zoom-out" aria-label="Zoom out" disabled>−</button>
-            <span class="zoom-readout" id="zoom-readout" aria-live="polite">100%</span>
-            <button type="button" id="zoom-in" aria-label="Zoom in" disabled>+</button>
-            <button type="button" id="reset-view" disabled>Reset view</button>
-            <button type="button" class="primary" id="snapshot" disabled>Take snapshot</button>
-          </div>
-        </section>
-        <aside class="panel">
-          <h2>Camera setup</h2>
-          <label for="camera-select">Camera</label>
-          <select id="camera-select"><option value="">Default camera</option></select>
-          <p class="hint">Connect your document camera before starting. If it is not listed, allow camera access and refresh this page.</p>
-          <div class="adjustment"><label for="brightness">Brightness <output id="brightness-value">100%</output></label><input id="brightness" type="range" min="50" max="150" value="100" aria-label="Brightness" disabled></div>
-          <div class="adjustment"><label for="contrast">Contrast <output id="contrast-value">100%</output></label><input id="contrast" type="range" min="50" max="150" value="100" aria-label="Contrast" disabled></div>
-          <button type="button" id="reset-adjustments" disabled>Reset image adjustments</button>
-          <p id="status" role="status" aria-live="polite">Camera access starts only when you click “Start camera.”</p>
-          <h2>Snapshots</h2>
-          <p class="hint">Snapshots are downloaded when you click Take snapshot. Brightness and contrast adjustments are included.</p>
-          <div class="snapshots" id="snapshots" aria-live="polite"></div>
-          <p class="footnote">Camera video stays in this browser tab. This page does not upload video or snapshots.</p>
-        </aside>
-      </div>
+    <main class="app" id="app">
+      <nav class="topbar" aria-label="Viewer options">
+        <button type="button" id="open-menu" aria-label="Open camera controls" aria-controls="control-menu" aria-expanded="false" title="Camera controls">☰</button>
+        <button type="button" id="fullscreen" aria-label="Enter fullscreen" title="Enter fullscreen">⛶</button>
+      </nav>
+      <section class="viewer" aria-label="Document camera viewer">
+        <div class="stage" id="stage" aria-label="Camera preview. When zoomed in, drag to pan the image.">
+          <video id="video" autoplay muted playsinline hidden></video>
+          <div class="placeholder" id="placeholder"><strong>Document Camera</strong><p>Open the controls menu to choose a camera and start the live view.</p></div>
+        </div>
+      </section>
+      <div class="menu-backdrop" id="menu-backdrop" hidden></div>
+      <aside class="panel closed" id="control-menu" aria-label="Camera controls" aria-hidden="true" inert>
+        <div class="menu-heading"><h1>Camera controls</h1><button type="button" id="close-menu" aria-label="Close camera controls">×</button></div>
+        <div class="control-grid" aria-label="Camera actions">
+          <button type="button" class="primary" id="start">Start camera</button>
+          <button type="button" id="stop" disabled>Stop camera</button>
+          <button type="button" id="freeze" disabled aria-pressed="false">Freeze frame</button>
+          <button type="button" class="primary" id="snapshot" disabled>Take snapshot</button>
+          <button type="button" id="zoom-out" aria-label="Zoom out" disabled>− Zoom out</button>
+          <output class="zoom-readout" id="zoom-readout" aria-live="polite">100%</output>
+          <button type="button" id="zoom-in" aria-label="Zoom in" disabled>+ Zoom in</button>
+          <button type="button" id="reset-view" disabled>Reset view</button>
+        </div>
+        <h2>Camera setup</h2>
+        <label for="camera-select">Camera</label>
+        <select id="camera-select"><option value="">Default camera</option></select>
+        <p class="hint">Connect your document camera before starting. If it is not listed, allow camera access and refresh this page.</p>
+        <div class="adjustment"><label for="brightness">Brightness <output id="brightness-value">100%</output></label><input id="brightness" type="range" min="50" max="150" value="100" aria-label="Brightness" disabled></div>
+        <div class="adjustment"><label for="contrast">Contrast <output id="contrast-value">100%</output></label><input id="contrast" type="range" min="50" max="150" value="100" aria-label="Contrast" disabled></div>
+        <button type="button" id="reset-adjustments" disabled>Reset image adjustments</button>
+        <p id="status" role="status" aria-live="polite">Camera access starts only when you click “Start camera.”</p>
+        <h2>Snapshots</h2>
+        <p class="hint">Snapshots are downloaded when captured. Brightness and contrast adjustments are included.</p>
+        <div class="snapshots" id="snapshots" aria-live="polite"></div>
+        <p class="footnote">Camera video stays in this browser tab. This page does not upload video or snapshots.</p>
+      </aside>
     </main>
     <canvas id="capture" hidden></canvas>
     <script>
       (() => {
+        const app = document.getElementById('app');
         const video = document.getElementById('video');
         const stage = document.getElementById('stage');
         const placeholder = document.getElementById('placeholder');
@@ -107,22 +114,36 @@
         const resetAdjustmentsButton = document.getElementById('reset-adjustments');
         const canvas = document.getElementById('capture');
         const snapshots = document.getElementById('snapshots');
-        let stream = null;
-        let scale = 1;
-        let offsetX = 0;
-        let offsetY = 0;
-        let drag = null;
+        const menu = document.getElementById('control-menu');
+        const openMenuButton = document.getElementById('open-menu');
+        const closeMenuButton = document.getElementById('close-menu');
+        const backdrop = document.getElementById('menu-backdrop');
+        const fullscreenButton = document.getElementById('fullscreen');
+        let stream = null, scale = 1, offsetX = 0, offsetY = 0, drag = null;
         const MIN_ZOOM = 1, MAX_ZOOM = 4, ZOOM_STEP = 0.25;
 
         function setStatus(message) { status.textContent = message; }
+        function setMenuOpen(open) {
+          menu.classList.toggle('closed', !open);
+          menu.inert = !open;
+          menu.setAttribute('aria-hidden', String(!open));
+          openMenuButton.setAttribute('aria-expanded', String(open));
+          backdrop.hidden = !open;
+          if (open) closeMenuButton.focus();
+          else openMenuButton.focus();
+        }
+        function syncFullscreenButton() {
+          const isFullscreen = document.fullscreenElement === app;
+          fullscreenButton.textContent = isFullscreen ? '×' : '⛶';
+          fullscreenButton.setAttribute('aria-label', isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen');
+          fullscreenButton.title = isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen';
+        }
         function renderView() {
           video.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
           video.style.filter = `brightness(${brightness.value}%) contrast(${contrast.value}%)`;
-          brightnessValue.value = `${brightness.value}%`;
-          contrastValue.value = `${contrast.value}%`;
-          brightnessValue.textContent = `${brightness.value}%`;
-          contrastValue.textContent = `${contrast.value}%`;
-          zoomReadout.textContent = `${Math.round(scale * 100)}%`;
+          brightnessValue.value = `${brightness.value}%`; contrastValue.value = `${contrast.value}%`;
+          brightnessValue.textContent = `${brightness.value}%`; contrastValue.textContent = `${contrast.value}%`;
+          zoomReadout.value = `${Math.round(scale * 100)}%`; zoomReadout.textContent = `${Math.round(scale * 100)}%`;
           zoomInButton.disabled = !stream || scale >= MAX_ZOOM;
           zoomOutButton.disabled = !stream || scale <= MIN_ZOOM;
           resetButton.disabled = !stream || (scale === MIN_ZOOM && offsetX === 0 && offsetY === 0);
@@ -135,31 +156,19 @@
           renderView();
         }
         function setAdjustmentsEnabled(enabled) {
-          brightness.disabled = !enabled;
-          contrast.disabled = !enabled;
+          brightness.disabled = !enabled; contrast.disabled = !enabled;
           resetAdjustmentsButton.disabled = !enabled || (brightness.value === '100' && contrast.value === '100');
         }
         function resetAdjustments() { brightness.value = '100'; contrast.value = '100'; renderView(); setAdjustmentsEnabled(Boolean(stream)); }
         function resetFreeze() {
-          video.pause();
-          freezeButton.disabled = !stream;
-          freezeButton.textContent = 'Freeze frame';
-          freezeButton.setAttribute('aria-pressed', 'false');
+          video.pause(); freezeButton.disabled = !stream;
+          freezeButton.textContent = 'Freeze frame'; freezeButton.setAttribute('aria-pressed', 'false');
         }
         function stopCamera(message = 'Camera stopped.') {
           if (stream) stream.getTracks().forEach(track => track.stop());
-          stream = null;
-          video.srcObject = null;
-          video.hidden = true;
-          placeholder.hidden = false;
-          startButton.disabled = false;
-          stopButton.disabled = true;
-          snapshotButton.disabled = true;
-          cameraSelect.disabled = false;
-          resetFreeze();
-          setAdjustmentsEnabled(false);
-          resetView();
-          setStatus(message);
+          stream = null; video.srcObject = null; video.hidden = true; placeholder.hidden = false;
+          startButton.disabled = false; stopButton.disabled = true; snapshotButton.disabled = true; cameraSelect.disabled = false;
+          resetFreeze(); setAdjustmentsEnabled(false); resetView(); setStatus(message);
         }
         async function refreshCameras() {
           if (!navigator.mediaDevices?.enumerateDevices) return;
@@ -173,38 +182,21 @@
           } catch { setStatus('Could not list cameras. Check the browser’s camera permissions.'); }
         }
         async function startCamera() {
-          if (!navigator.mediaDevices?.getUserMedia) {
-            setStatus('Camera access is not available. Open this page in a supported browser over HTTPS.');
-            return;
-          }
-          startButton.disabled = true;
-          setStatus('Waiting for camera permission…');
+          if (!navigator.mediaDevices?.getUserMedia) { setStatus('Camera access is not available. Open this page in a supported browser over HTTPS.'); return; }
+          startButton.disabled = true; setStatus('Waiting for camera permission…');
           try {
             const deviceId = cameraSelect.value;
             const constraints = { audio: false, video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'environment' } };
             stream = await navigator.mediaDevices.getUserMedia(constraints);
-            video.srcObject = stream;
-            video.hidden = false;
-            placeholder.hidden = true;
+            video.srcObject = stream; video.hidden = false; placeholder.hidden = true;
             await video.play();
-            stopButton.disabled = false;
-            snapshotButton.disabled = false;
-            freezeButton.disabled = false;
-            cameraSelect.disabled = false;
-            setAdjustmentsEnabled(true);
-            setStatus('Camera is on. Freeze the image or drag it when zoomed in to pan.');
-            await refreshCameras();
-            cameraSelect.disabled = false;
-            renderView();
+            stopButton.disabled = false; snapshotButton.disabled = false; freezeButton.disabled = false; cameraSelect.disabled = false;
+            setAdjustmentsEnabled(true); setStatus('Camera is on. Freeze the image or drag it when zoomed in to pan.');
+            await refreshCameras(); cameraSelect.disabled = false; renderView();
           } catch (error) {
             if (stream) stream.getTracks().forEach(track => track.stop());
-            stream = null;
-            video.srcObject = null;
-            video.hidden = true;
-            placeholder.hidden = false;
-            cameraSelect.disabled = false;
-            startButton.disabled = false;
-            setAdjustmentsEnabled(false);
+            stream = null; video.srcObject = null; video.hidden = true; placeholder.hidden = false;
+            cameraSelect.disabled = false; startButton.disabled = false; setAdjustmentsEnabled(false);
             const messages = {
               NotAllowedError: 'Camera permission was denied. Allow camera access for this site in Chrome, then try again.',
               NotFoundError: 'No camera was found. Connect a document camera and try again.',
@@ -216,8 +208,7 @@
         }
         function takeSnapshot() {
           if (!stream || !video.videoWidth || !video.videoHeight) return;
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
+          canvas.width = video.videoWidth; canvas.height = video.videoHeight;
           const context = canvas.getContext('2d');
           context.filter = `brightness(${brightness.value}%) contrast(${contrast.value}%)`;
           context.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -225,84 +216,68 @@
             if (!blob) { setStatus('Could not create the snapshot. Please try again.'); return; }
             const url = URL.createObjectURL(blob);
             const filename = `document-camera-${new Date().toISOString().replace(/[:.]/g, '-')}.png`;
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = filename;
-            link.click();
-            const item = document.createElement('div');
-            const image = document.createElement('img');
-            image.src = url;
-            image.alt = `Snapshot taken ${new Date().toLocaleString()}`;
-            const previewLink = document.createElement('a');
-            previewLink.className = 'snapshot-link';
-            previewLink.href = url;
-            previewLink.download = filename;
-            previewLink.textContent = 'Download snapshot';
-            item.append(image, previewLink);
-            snapshots.prepend(item);
-            setStatus('Snapshot downloaded.');
+            const link = document.createElement('a'); link.href = url; link.download = filename; link.click();
+            const item = document.createElement('div'); const image = document.createElement('img');
+            image.src = url; image.alt = `Snapshot taken ${new Date().toLocaleString()}`;
+            const previewLink = document.createElement('a'); previewLink.className = 'snapshot-link';
+            previewLink.href = url; previewLink.download = filename; previewLink.textContent = 'Download snapshot';
+            item.append(image, previewLink); snapshots.prepend(item); setStatus('Snapshot downloaded.');
           }, 'image/png');
         }
 
+        openMenuButton.addEventListener('click', () => setMenuOpen(true));
+        closeMenuButton.addEventListener('click', () => setMenuOpen(false));
+        backdrop.addEventListener('click', () => setMenuOpen(false));
+        document.addEventListener('keydown', event => { if (event.key === 'Escape' && !menu.classList.contains('closed')) setMenuOpen(false); });
+        fullscreenButton.addEventListener('click', async () => {
+          try {
+            if (document.fullscreenElement === app) await document.exitFullscreen();
+            else if (app.requestFullscreen) await app.requestFullscreen();
+            else setStatus('Fullscreen is not supported by this browser.');
+          } catch { setStatus('Could not enter fullscreen. Check your browser settings.'); }
+        });
+        document.addEventListener('fullscreenchange', syncFullscreenButton);
         startButton.addEventListener('click', startCamera);
         stopButton.addEventListener('click', () => stopCamera());
         freezeButton.addEventListener('click', async () => {
           if (!stream) return;
           if (video.paused) {
-            try {
-              await video.play();
-              freezeButton.textContent = 'Freeze frame';
-              freezeButton.setAttribute('aria-pressed', 'false');
-              setStatus('Live camera resumed.');
-            } catch { setStatus('Could not resume the live camera. Try starting the camera again.'); }
+            try { await video.play(); freezeButton.textContent = 'Freeze frame'; freezeButton.setAttribute('aria-pressed', 'false'); setStatus('Live camera resumed.'); }
+            catch { setStatus('Could not resume the live camera. Try starting the camera again.'); }
           } else {
-            video.pause();
-            freezeButton.textContent = 'Resume live';
-            freezeButton.setAttribute('aria-pressed', 'true');
-            setStatus('Frame frozen. Click Resume live to continue.');
+            video.pause(); freezeButton.textContent = 'Resume live'; freezeButton.setAttribute('aria-pressed', 'true'); setStatus('Frame frozen. Click Resume live to continue.');
           }
         });
         snapshotButton.addEventListener('click', takeSnapshot);
         zoomInButton.addEventListener('click', () => setZoom(scale + ZOOM_STEP));
         zoomOutButton.addEventListener('click', () => setZoom(scale - ZOOM_STEP));
         resetButton.addEventListener('click', resetView);
-        brightness.addEventListener('input', renderView);
-        contrast.addEventListener('input', renderView);
+        brightness.addEventListener('input', renderView); contrast.addEventListener('input', renderView);
         brightness.addEventListener('change', () => setAdjustmentsEnabled(Boolean(stream)));
         contrast.addEventListener('change', () => setAdjustmentsEnabled(Boolean(stream)));
         resetAdjustmentsButton.addEventListener('click', resetAdjustments);
-        cameraSelect.addEventListener('change', async () => {
-          if (!stream) return;
-          stopCamera('Switching camera…');
-          await startCamera();
-        });
+        cameraSelect.addEventListener('change', async () => { if (stream) { stopCamera('Switching camera…'); await startCamera(); } });
         stage.addEventListener('pointerdown', event => {
           if (!stream || scale <= 1) return;
           drag = { x: event.clientX, y: event.clientY, offsetX, offsetY };
-          stage.setPointerCapture(event.pointerId);
-          renderView();
+          stage.setPointerCapture(event.pointerId); renderView();
         });
         stage.addEventListener('pointermove', event => {
           if (!drag) return;
-          offsetX = drag.offsetX + event.clientX - drag.x;
-          offsetY = drag.offsetY + event.clientY - drag.y;
-          renderView();
+          offsetX = drag.offsetX + event.clientX - drag.x; offsetY = drag.offsetY + event.clientY - drag.y; renderView();
         });
         function endDrag() { drag = null; renderView(); }
-        stage.addEventListener('pointerup', endDrag);
-        stage.addEventListener('pointercancel', endDrag);
+        stage.addEventListener('pointerup', endDrag); stage.addEventListener('pointercancel', endDrag);
         stage.addEventListener('wheel', event => {
           if (!stream) return;
-          event.preventDefault();
-          setZoom(scale + (event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP));
+          event.preventDefault(); setZoom(scale + (event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP));
         }, { passive: false });
         video.addEventListener('loadedmetadata', refreshCameras);
         window.addEventListener('beforeunload', () => {
           if (stream) stream.getTracks().forEach(track => track.stop());
           snapshots.querySelectorAll('img').forEach(image => URL.revokeObjectURL(image.src));
         });
-        refreshCameras();
-        renderView();
+        refreshCameras(); renderView(); syncFullscreenButton();
       })();
     </script>
   </body>
