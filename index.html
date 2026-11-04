@@ -1,10 +1,70 @@
 <!DOCTYPE html>
-<html>
-<head>
-  <meta http-equiv="refresh" content="0; url=chrome-extension://njkaoncgdacajckgpjnphkldioicgopb/app/index.html">
-</head>
-<body>
-  <p>Opening application…</p>
-  <p><a href="chrome-extension://njkaoncgdacajckgpjnphkldioicgopb/app/index.html">Open the application</a></p>
-</body>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DocCam Viewer</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 2rem;
+        text-align: center;
+        background: #f7f7f7;
+        color: #1f2937;
+      }
+      .card {
+        max-width: 560px;
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+      }
+      a.button {
+        display: inline-block;
+        background: #2563eb;
+        color: #ffffff;
+        text-decoration: none;
+        padding: 0.85rem 1.25rem;
+        border-radius: 8px;
+        font-weight: 600;
+        margin-top: 1rem;
+      }
+      .muted {
+        color: #4b5563;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>DocCam Viewer</h1>
+      <p id="status">Checking if the extension is available...</p>
+      <p class="muted">
+        Chrome blocks automatic navigation from a website to an installed extension for security reasons.
+        If the extension is installed, use the button below to open it.
+      </p>
+      <a id="extension-link" class="button" href="chrome-extension://njkaoncgdacajckgpjnphkldioicgopb/app/index.html">
+        Open DocCam Viewer
+      </a>
+    </div>
+
+    <script>
+      const extensionUrl = "chrome-extension://njkaoncgdacajckgpjnphkldioicgopb/app/index.html";
+      const status = document.getElementById("status");
+      const link = document.getElementById("extension-link");
+
+      link.href = extensionUrl;
+
+      // Best-effort launch. Chrome may block automatic navigation, which is expected.
+      try {
+        window.location.href = extensionUrl;
+      } catch (error) {
+        // Ignore; Chrome prevents this from a normal web page.
+      }
+
+      setTimeout(() => {
+        status.textContent = "Automatic launch was blocked by Chrome. Please click the button above to open the extension.";
+      }, 1000);
+    </script>
+  </body>
 </html>
